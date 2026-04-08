@@ -87,19 +87,10 @@
   <div style="font-size:48px;margin-bottom:16px;">💙</div>
   <h1>Saúde Pessoal</h1>
   <p>Seu prontuário familiar<br/>salvo com segurança no Google Drive</p>
-  <div id="g_id_onload"
-    data-client_id="872104274431-4k5603k842orhjkktu1h0db0bk6n55og.apps.googleusercontent.com"
-    data-callback="onGoogleLogin"
-    data-auto_prompt="false">
-  </div>
-  <div class="g_id_signin"
-    data-type="standard"
-    data-size="large"
-    data-theme="outline"
-    data-text="sign_in_with"
-    data-shape="rectangular"
-    data-logo_alignment="left">
-  </div>
+  <button onclick="iniciarLogin()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 24px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"/>
+    Entrar com Google
+  </button>
 </div>
 
 <!-- APP -->
@@ -220,7 +211,8 @@ let driveFileId = null;
 
 // ── Google Login ──────────────────────────────────────────────────────────────
 function onGoogleLogin(response) {
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  // Salva o credential e solicita token do Drive via redirect
+  localStorage.setItem('id_token_temp', response.credential);
   solicitarTokenDrive();
 }
 
@@ -233,14 +225,32 @@ function solicitarTokenDrive() {
         accessToken = tokenResponse.access_token;
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').classList.remove('oculto');
-        mostrarSpinner();
         await carregarDados();
-        ocultarSpinner();
         renderHome();
       }
     },
   });
-  client.requestAccessToken();
+  // Usar redirect ao invés de popup
+  client.requestAccessToken({ prompt: '' });
+}
+
+// Tenta auto-login se já teve sessão
+function tentarAutoLogin() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    prompt: '',
+    callback: async (tokenResponse) => {
+      if (tokenResponse.access_token) {
+        accessToken = tokenResponse.access_token;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').classList.remove('oculto');
+        await carregarDados();
+        renderHome();
+      }
+    },
+  });
+  client.requestAccessToken({ prompt: 'none' });
 }
 
 // ── Drive API ─────────────────────────────────────────────────────────────────
@@ -317,13 +327,22 @@ function mostrarToast(msg, cor="#6366f1", ms=3000) {
 }
 
 function mostrarSpinner() {
-  const c = document.querySelector('.content');
-  c.innerHTML = `<div class="spinner"><div class="spinner-circle"></div><div class="spinner-txt">Carregando do Drive…</div></div>`;
+  ['home','docs','add-doc','add-perfil'].forEach(t => {
+    document.getElementById('tela-'+t).classList.add('oculto');
+  });
+  let sp = document.getElementById('spinner-global');
+  if (!sp) {
+    sp = document.createElement('div');
+    sp.id = 'spinner-global';
+    sp.className = 'spinner';
+    sp.innerHTML = '<div class="spinner-circle"></div><div class="spinner-txt">Carregando do Drive…</div>';
+    document.querySelector('.content').prepend(sp);
+  }
+  sp.style.display = 'flex';
 }
 function ocultarSpinner() {
-  const c = document.querySelector('.content');
-  c.innerHTML = document.getElementById('tela-home') ? '' : '';
-  location.reload(); // recarrega o HTML mantendo o token
+  const sp = document.getElementById('spinner-global');
+  if (sp) sp.style.display = 'none';
 }
 
 function atualizarSubtitulo(txt) { document.getElementById('header-sub').textContent = txt; }
@@ -532,6 +551,24 @@ function removerDoc(id) {
   dados.docs = dados.docs.filter(d=>d.id!==id);
   salvarDados();
   renderListaDocs();
+}
+
+// ── Login direto ─────────────────────────────────────────────────────────────
+function iniciarLogin() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (tokenResponse) => {
+      if (tokenResponse.access_token) {
+        accessToken = tokenResponse.access_token;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').classList.remove('oculto');
+        await carregarDados();
+        renderHome();
+      }
+    },
+  });
+  client.requestAccessToken({ prompt: 'select_account' });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
