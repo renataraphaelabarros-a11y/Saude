@@ -8,6 +8,23 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyBSLxUBuDiGRi1pLb6ta_sqqondYD96G7A",
+      authDomain: "hisaude-c5819.firebaseapp.com",
+      databaseURL: "https://hisaude-c5819-default-rtdb.firebaseio.com",
+      projectId: "hisaude-c5819",
+      storageBucket: "hisaude-c5819.firebasestorage.app",
+      messagingSenderId: "825247112507",
+      appId: "1:825247112507:web:66e1eb86ca15cbeb0e6b1e",
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    window._fbSet = (data) => set(ref(db, "saude"), data);
+    window._fbGet = () => get(ref(db, "saude")).then(s => s.exists() ? s.val() : null);
+  </script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { background:#f8faff; font-family:'Nunito',sans-serif; }
@@ -37,38 +54,12 @@ const iniciais = (n="") => n.split(" ").slice(0,2).map(w=>w[0]).join("").toUpper
 const fmtData = (iso) => iso ? new Date(iso).toLocaleDateString("pt-BR") : "";
 const catDe = (id) => CATEGORIAS.find(c=>c.id===id) || CATEGORIAS[4];
 
-async function chamarClaude(mensagens, sistema="") {
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      model:"claude-sonnet-4-20250514",
-      max_tokens:4096,
-      system: sistema,
-      messages: mensagens,
-      mcp_servers:[{ type:"url", url:"https://drive.mcp.claude.com/mcp", name:"gdrive" }],
-    }),
-  });
-  if (!r.ok) throw new Error("API " + r.status);
-  return r.json();
-}
-
 async function carregarDrive() {
-  const d = await chamarClaude([{
-    role:"user",
-    content:`Procure no Google Drive o arquivo "${DRIVE_FILE}". Se existir, retorne SOMENTE o JSON bruto. Se não existir, retorne: NOT_FOUND`
-  }], "Você gerencia arquivos no Google Drive. Siga as instruções com precisão.");
-  const txt = d.content.filter(b=>b.type==="text").map(b=>b.text).join("");
-  if (txt.includes("NOT_FOUND")) return null;
-  const m = txt.match(/\{[\s\S]*\}/);
-  return m ? JSON.parse(m[0]) : null;
+  return await window._fbGet();
 }
 
 async function salvarDrive(dados) {
-  await chamarClaude([{
-    role:"user",
-    content:`Salve ou atualize no Google Drive o arquivo "${DRIVE_FILE}" com este JSON:\n\n${JSON.stringify(dados)}\n\nResponda apenas "OK".`
-  }], "Você gerencia arquivos no Google Drive.");
+  await window._fbSet(dados);
 }
 
 function Avatar({ nome, corIdx, tam=44 }) {
