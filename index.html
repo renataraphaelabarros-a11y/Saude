@@ -1,579 +1,507 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-  <title>💙 Saúde Pessoal</title>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@0,600;1,400&display=swap" rel="stylesheet"/>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#f8faff;font-family:'Nunito',sans-serif;color:#1e293b;}
-    input,select,textarea,button{font-family:'Nunito',sans-serif;}
-    ::-webkit-scrollbar{width:0;}
-    @keyframes spin{to{transform:rotate(360deg);}}
-    @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>💙 Saúde Pessoal</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@0,600;1,400&display=swap" rel="stylesheet"/>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--azul:#2563eb;--azul-s:#eff6ff;--azul-m:#bfdbfe;--verde:#16a34a;--verde-s:#f0fdf4;--laranja:#ea580c;--laranja-s:#fff7ed;--rosa:#db2777;--rosa-s:#fdf2f8;--roxo:#7c3aed;--roxo-s:#f5f3ff;--cinza:#64748b;--borda:#e2e8f0;--bg:#f8faff;--card:#fff;--tx:#1e293b;--tx2:#475569;--tx3:#94a3b8;}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--tx);}
+input,select,textarea,button{font-family:'Nunito',sans-serif;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--borda);border-radius:3px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes up{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
-    /* Layout */
-    #app{min-height:100vh;padding-bottom:80px;}
-    .header{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(99,102,241,0.06);}
-    .header-title{font-size:17px;font-weight:800;color:#1e293b;}
-    .header-sub{font-size:11px;color:#94a3b8;font-weight:700;margin-top:1px;}
-    .content{padding:0 16px;}
-    .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:space-around;padding:10px 0 16px;z-index:200;box-shadow:0 -1px 12px rgba(99,102,241,0.08);}
-    .nav-btn{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:0 12px;}
-    .nav-btn.ativo{color:#6366f1;}
-    .nav-btn:not(.ativo){color:#94a3b8;}
-    .nav-btn span{font-size:22px;}
+#login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;background:linear-gradient(160deg,#eff6ff,#f0fdf4);}
+.l-logo{font-size:60px;margin-bottom:16px;animation:up .5s ease;}
+.l-title{font-family:'Lora',serif;font-size:28px;font-weight:600;margin-bottom:8px;animation:up .5s .1s ease both;}
+.l-sub{color:var(--tx2);font-size:14px;margin-bottom:36px;font-weight:600;line-height:1.7;animation:up .5s .2s ease both;}
+.btn-g{background:#fff;border:1.5px solid var(--borda);border-radius:14px;padding:14px 28px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.08);animation:up .5s .3s ease both;}
 
-    /* Cards */
-    .card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
-    .card.ativo{border:1.5px solid #6366f1;background:#eef2ff;}
-    .hero{background:linear-gradient(135deg,#eef2ff,#f0fdf4);border-radius:20px;padding:24px 20px 20px;margin:16px 0 20px;border:1px solid #e0e7ff;}
-    .hero-title{font-family:'Lora',serif;font-size:22px;font-weight:600;color:#1e293b;line-height:1.2;}
-    .hero-title em{color:#6366f1;}
-    .hero-count{font-size:13px;color:#475569;margin-top:8px;font-weight:600;}
+#app{display:none;min-height:100vh;padding-bottom:76px;}
+.hdr{background:var(--card);border-bottom:1px solid var(--borda);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(37,99,235,0.05);}
+.hdr-l{display:flex;align-items:center;gap:6px;}
+.hdr-t{font-size:16px;font-weight:800;}
+.hdr-s{font-size:10px;color:var(--tx3);font-weight:700;margin-top:1px;}
+.btn-bk{background:none;border:none;color:var(--tx2);font-size:26px;cursor:pointer;padding:0 4px 0 0;line-height:1;}
+.btn-sm{background:var(--azul-s);border:none;border-radius:10px;padding:6px 12px;color:var(--azul);font-weight:800;font-size:12px;cursor:pointer;}
 
-    /* Form */
-    .label{font-size:11px;color:#94a3b8;margin-bottom:5px;display:block;font-weight:800;letter-spacing:.5px;text-transform:uppercase;}
-    .input{width:100%;background:#f1f5fb;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;color:#1e293b;font-size:14px;font-weight:600;outline:none;}
-    .btn{background:#6366f1;color:#fff;border:none;border-radius:12px;padding:13px 18px;font-size:14px;font-weight:800;cursor:pointer;width:100%;margin-top:4px;}
-    .btn-outline{background:#f1f5fb;color:#6366f1;border:1.5px dashed #e2e8f0;}
-    .btn-sm{background:#eef2ff;color:#6366f1;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;}
-    .btn-back{background:none;border:none;color:#475569;font-size:24px;cursor:pointer;padding-right:8px;}
-    .btn-delete{background:none;border:none;color:#ef4444;font-size:18px;cursor:pointer;}
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--borda);display:flex;justify-content:space-around;padding:8px 0 14px;z-index:200;box-shadow:0 -2px 16px rgba(37,99,235,0.06);}
+.nb{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-weight:800;padding:0 10px;color:var(--tx3);}
+.nb.on{color:var(--azul);}
+.nb span{font-size:20px;}
 
-    /* Pill */
-    .pill{border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;}
+.cx{padding:0 14px;}
+.card{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.03);}
+.card.on{border:1.5px solid var(--azul);background:var(--azul-s);}
 
-    /* Avatar */
-    .avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;}
+.hero{background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:20px;padding:20px;margin:14px 0 14px;color:#fff;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(255,255,255,0.1);border-radius:50%;}
+.hero-ola{font-size:12px;font-weight:700;opacity:.8;}
+.hero-nome{font-family:'Lora',serif;font-size:22px;font-weight:600;margin-bottom:12px;}
+.hero-stats{display:flex;gap:20px;}
+.hs-n{font-size:22px;font-weight:900;}
+.hs-l{font-size:10px;font-weight:700;opacity:.8;}
 
-    /* Filtros */
-    .filtros{display:flex;gap:6px;overflow-x:auto;padding:12px 0;scrollbar-width:none;}
-    .filtro-btn{border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;border:1.5px solid #e2e8f0;background:#f1f5fb;color:#94a3b8;}
-    .filtro-btn.ativo{background:var(--cor)18;border-color:var(--cor)44;color:var(--cor);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.quad{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 1px 4px rgba(0,0,0,0.03);}
+.quad:active{transform:scale(.98);}
+.qi{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.qt{font-size:12px;font-weight:800;}
+.qc{font-size:10px;color:var(--tx3);font-weight:700;}
+.qd{font-size:11px;color:var(--tx2);font-weight:700;margin:8px 0 4px;}
+.qi-txt{font-size:11px;color:var(--tx2);padding:2px 0;}
 
-    /* Login */
-    #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;background:linear-gradient(135deg,#eef2ff,#f0fdf4);}
-    #login-screen h1{font-family:'Lora',serif;font-size:28px;font-weight:600;color:#1e293b;margin-bottom:8px;}
-    #login-screen p{color:#64748b;font-size:14px;margin-bottom:32px;font-weight:600;}
+.doc-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-bottom:8px;animation:up .3s ease;}
+.dc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.dc-titulo{font-weight:800;font-size:14px;}
+.dc-meta{font-size:11px;color:var(--tx3);font-weight:700;margin-top:2px;}
+.dc-vals{margin-top:10px;padding-top:10px;border-top:1px solid var(--borda);}
+.vr{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px;}
+.vr-n{color:var(--tx2);font-weight:700;}
+.vr-v{font-weight:800;}
 
-    /* Spinner */
-    .spinner{display:flex;flex-direction:column;align-items:center;gap:14px;padding:56px;}
-    .spinner-circle{width:40px;height:40px;border-radius:50%;border:3px solid #e0e7ff;border-top-color:#6366f1;animation:spin .8s linear infinite;}
-    .spinner-txt{color:#94a3b8;font-size:13px;font-weight:700;}
+.chart-wrap{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px;margin-bottom:12px;}
+.chart-t{font-size:13px;font-weight:800;margin-bottom:8px;}
+.chart-sel{background:var(--bg);border:1.5px solid var(--borda);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;outline:none;margin-bottom:10px;width:100%;color:var(--tx);}
 
-    /* Toast */
-    .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:800;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:9999;animation:fadeUp .3s ease;white-space:nowrap;}
+.ftitle{font-family:'Lora',serif;font-size:20px;font-weight:600;margin:16px 0 18px;}
+.lbl{font-size:10px;color:var(--tx3);margin-bottom:4px;display:block;font-weight:800;letter-spacing:.6px;text-transform:uppercase;}
+.inp{width:100%;background:#f1f5fb;border:1.5px solid var(--borda);border-radius:12px;padding:12px 14px;color:var(--tx);font-size:14px;font-weight:600;outline:none;}
+.inp:focus{border-color:var(--azul);}
+.btn{background:var(--azul);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;width:100%;}
+.btn-o{background:#f1f5fb;color:var(--azul);border:1.5px dashed var(--borda);}
+.btn-del{background:none;border:none;color:#ef4444;font-size:16px;cursor:pointer;flex-shrink:0;}
+.mb12{margin-bottom:12px;}
+.mb18{margin-bottom:18px;}
+.fr{display:flex;align-items:center;gap:10px;}
+.f1{flex:1;}
+.slbl{font-size:10px;font-weight:800;color:var(--tx3);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px;}
+.hide{display:none!important;}
+.pill{border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:3px;}
 
-    /* Cores avatar */
-    .cor-picker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-    .cor-circulo{width:32px;height:32px;border-radius:50%;cursor:pointer;outline:3px solid transparent;outline-offset:2px;transition:outline .1s;}
-    .cor-circulo.selecionado{outline-color:#6366f1;}
+.up-area{border:2px dashed var(--azul-m);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;background:var(--azul-s);}
+.up-icon{font-size:32px;margin-bottom:6px;}
+.up-t{font-size:13px;font-weight:800;color:var(--azul);}
+.up-s{font-size:11px;color:var(--tx3);font-weight:700;margin-top:3px;}
 
-    .mb14{margin-bottom:14px;}
-    .mb20{margin-bottom:20px;}
-    .mt16{margin-top:16px;}
-    .flex-row{display:flex;align-items:center;gap:14px;}
-    .flex-1{flex:1;}
-    .oculto{display:none;}
-  </style>
+.ia-box{background:var(--azul-s);border:1.5px solid var(--azul-m);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;}
+.ia-t{font-size:13px;font-weight:800;color:var(--azul);margin-top:8px;animation:pulse 1.2s infinite;}
+
+.val-row{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.val-row input{flex:1;}
+.btn-add-v{background:var(--azul-s);border:none;border-radius:8px;padding:8px;color:var(--azul);font-size:12px;font-weight:800;cursor:pointer;width:100%;margin-top:4px;}
+
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;}
+.cp{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px;}
+.cc{width:30px;height:30px;border-radius:50%;cursor:pointer;outline:3px solid transparent;outline-offset:2px;}
+.cc.on{outline-color:var(--azul);}
+
+.spinner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;}
+.sc{width:38px;height:38px;border-radius:50%;border:3px solid var(--azul-m);border-top-color:var(--azul);animation:spin .8s linear infinite;}
+.st{color:var(--tx3);font-size:13px;font-weight:700;}
+
+.toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:800;z-index:9999;white-space:nowrap;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.15);}
+</style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div style="font-size:48px;margin-bottom:16px;">💙</div>
-  <h1>Saúde Pessoal</h1>
-  <p>Seu prontuário familiar<br/>salvo com segurança no Google Drive</p>
-  <button onclick="iniciarLogin()" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 24px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+<div id="login">
+  <div class="l-logo">💙</div>
+  <div class="l-title">Saúde Pessoal</div>
+  <div class="l-sub">Dashboard completo com gráficos,<br/>comparativos e leitura de exames por IA<br/>— salvo no seu Google Drive</div>
+  <button class="btn-g" onclick="login()">
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"/>
     Entrar com Google
   </button>
 </div>
 
-<!-- APP -->
-<div id="app" class="oculto">
-  <!-- Header -->
-  <div class="header">
-    <div class="flex-row" style="gap:8px;">
-      <button class="btn-back oculto" id="btn-voltar" onclick="voltar()">‹</button>
-      <div>
-        <div class="header-title" id="header-titulo">💙 Saúde Pessoal</div>
-        <div class="header-sub" id="header-sub">☁️ Google Drive conectado</div>
-      </div>
+<div id="app">
+  <div class="hdr">
+    <div class="hdr-l">
+      <button class="btn-bk hide" id="bbk" onclick="voltar()">‹</button>
+      <div><div class="hdr-t" id="htit">💙 Saúde Pessoal</div><div class="hdr-s" id="hsub">☁️ Google Drive conectado</div></div>
     </div>
-    <button class="btn-sm oculto" id="btn-sync" onclick="sincronizar()">↑ Sync</button>
+    <button class="btn-sm hide" id="bsync" onclick="save()">↑ Sync</button>
   </div>
 
-  <!-- Conteúdo -->
-  <div class="content">
+  <div class="cx">
+    <!-- HOME -->
+    <div id="t-home">
+      <div style="padding:14px 0 8px;"><div class="slbl">Perfis da família</div></div>
+      <div id="lista-p"></div>
+      <button class="btn" onclick="go('add-p')" style="margin-top:2px;">+ Adicionar Perfil</button>
+    </div>
 
-    <!-- TELA HOME -->
-    <div id="tela-home">
+    <!-- DASH -->
+    <div id="t-dash" class="hide">
       <div class="hero">
-        <div style="font-size:28px;margin-bottom:4px;">💙</div>
-        <div class="hero-title">Prontuário<br/><em>Pessoal</em></div>
-        <div class="hero-count" id="hero-count">0 perfis • 0 documentos</div>
+        <div class="hero-ola">Olá,</div>
+        <div class="hero-nome" id="d-nome">—</div>
+        <div class="hero-stats">
+          <div><div class="hs-n" id="s-ex">0</div><div class="hs-l">Exames</div></div>
+          <div><div class="hs-n" id="s-bi">0</div><div class="hs-l">Bioimpedâncias</div></div>
+          <div><div class="hs-n" id="s-al">0</div><div class="hs-l">Total docs</div></div>
+        </div>
       </div>
-      <div class="label">Perfis da família</div>
-      <div id="lista-perfis"></div>
-      <button class="btn" onclick="irTela('add-perfil')">+ Adicionar Perfil</button>
+      <div class="g2" id="quadros"></div>
     </div>
 
-    <!-- TELA DOCS -->
-    <div id="tela-docs" class="oculto">
-      <div id="perfil-card" class="card mt16 flex-row" style="background:linear-gradient(135deg,#eef2ff,#f0fdf4);border:1.5px solid #c7d2fe;"></div>
-      <div class="filtros" id="filtros"></div>
-      <div id="lista-docs"></div>
-      <button class="btn" onclick="irTela('add-doc')" style="margin-top:6px;">+ Adicionar Documento</button>
+    <!-- CATEGORIA -->
+    <div id="t-cat" class="hide">
+      <div id="chart-area"></div>
+      <div class="slbl" id="cat-lbl" style="margin-top:4px;">Documentos</div>
+      <div id="lista-c"></div>
+      <button class="btn" onclick="go('add-d')" style="margin-top:4px;">+ Adicionar</button>
     </div>
 
-    <!-- TELA ADD DOC -->
-    <div id="tela-add-doc" class="oculto">
-      <div style="font-family:'Lora',serif;font-size:20px;font-weight:600;margin:16px 0 20px;">Novo Documento</div>
-      <div class="mb14"><label class="label">Nome / Descrição *</label><input class="input" id="doc-nome" placeholder="Ex: Hemograma completo"/></div>
-      <div class="mb14"><label class="label">Categoria</label>
-        <select class="input" id="doc-cat">
-          <option value="exame">🧪 Exame</option>
-          <option value="bioimpedancia">⚖️ Bioimpedância</option>
-          <option value="atestado">📋 Atestado</option>
-          <option value="receita">💊 Receita</option>
-          <option value="outro">📎 Outro</option>
+    <!-- ADD DOC -->
+    <div id="t-add-d" class="hide">
+      <div class="ftitle">Novo Documento</div>
+      <div class="mb12"><label class="lbl">Categoria</label>
+        <select class="inp" id="d-cat">
+          <option value="ex">🧪 Exame de Sangue</option>
+          <option value="bi">⚖️ Bioimpedância</option>
+          <option value="at">📋 Atestado</option>
+          <option value="re">💊 Receita Médica</option>
+          <option value="ou">📎 Outro</option>
         </select>
       </div>
-      <div class="mb14"><label class="label">Data do documento</label><input class="input" id="doc-data" type="date"/></div>
-      <div class="mb14"><label class="label">Observações</label><textarea class="input" id="doc-obs" style="min-height:80px;resize:vertical;" placeholder="Médico, resultado…"></textarea></div>
-      <div class="mb20">
-        <label class="label">Arquivo (PDF, imagem…)</label>
-        <input type="file" id="doc-arquivo" accept="image/*,.pdf" style="display:none;" onchange="lerArquivo(this)"/>
-        <button class="btn btn-outline" onclick="document.getElementById('doc-arquivo').click()" id="btn-arquivo">📂 Selecionar arquivo</button>
+      <div class="mb12"><label class="lbl">Data</label><input class="inp" id="d-dt" type="date"/></div>
+      <div class="mb12"><label class="lbl">Observações</label><textarea class="inp" id="d-ob" style="min-height:65px;resize:vertical;" placeholder="Médico, clínica…"></textarea></div>
+
+      <div class="mb12">
+        <label class="lbl">Upload (IA extrai os valores)</label>
+        <input type="file" id="d-arq" accept=".pdf,image/*" style="display:none;" onchange="handleFile(this)"/>
+        <div class="up-area" onclick="document.getElementById('d-arq').click()">
+          <div class="up-icon">📄</div>
+          <div class="up-t" id="up-txt">Toque para selecionar</div>
+          <div class="up-s">PDF ou imagem — IA extrai automaticamente</div>
+        </div>
       </div>
-      <button class="btn" onclick="salvarDoc()">Salvar documento</button>
+
+      <div class="ia-box hide" id="ia-box">
+        <div class="sc" style="margin:0 auto;width:26px;height:26px;border-width:2px;"></div>
+        <div class="ia-t">🤖 Lendo documento com IA…</div>
+      </div>
+
+      <div id="area-vals" class="mb12">
+        <label class="lbl">Valores</label>
+        <div id="vals-form"></div>
+        <button class="btn-add-v" onclick="addValRow()">+ Adicionar valor</button>
+      </div>
+
+      <div class="mb18"><label class="lbl">Arquivo</label><div id="arq-prev" style="font-size:12px;color:var(--azul);font-weight:700;min-height:16px;"></div></div>
+      <button class="btn" onclick="saveDoc()">Salvar documento</button>
     </div>
 
-    <!-- TELA ADD PERFIL -->
-    <div id="tela-add-perfil" class="oculto">
-      <div style="font-family:'Lora',serif;font-size:20px;font-weight:600;margin:16px 0 20px;">Novo Perfil</div>
-      <div class="mb14"><label class="label">Nome completo *</label><input class="input" id="perfil-nome" placeholder="Ex: Renata Silva"/></div>
-      <div class="mb14"><label class="label">Data de nascimento</label><input class="input" id="perfil-nasc" type="date"/></div>
-      <div class="mb14"><label class="label">Sexo</label>
-        <select class="input" id="perfil-sexo">
+    <!-- ADD PERFIL -->
+    <div id="t-add-p" class="hide">
+      <div class="ftitle">Novo Perfil</div>
+      <div class="mb12"><label class="lbl">Nome *</label><input class="inp" id="p-nome" placeholder="Ex: Renata" oninput="prevAv()"/></div>
+      <div class="mb12"><label class="lbl">Nascimento</label><input class="inp" id="p-nasc" type="date"/></div>
+      <div class="mb12"><label class="lbl">Sexo</label>
+        <select class="inp" id="p-sx">
           <option value="">Preferir não dizer</option>
           <option value="Feminino">Feminino</option>
           <option value="Masculino">Masculino</option>
           <option value="Outro">Outro</option>
         </select>
       </div>
-      <div class="mb20">
-        <label class="label">Cor do avatar</label>
-        <div class="cor-picker" id="cor-picker"></div>
-        <div id="avatar-preview"></div>
-      </div>
-      <button class="btn" onclick="salvarPerfil()">Criar perfil</button>
+      <div class="mb18"><label class="lbl">Cor</label><div class="cp" id="cp"></div><div id="av-prev"></div></div>
+      <button class="btn" onclick="saveP()">Criar perfil</button>
     </div>
-
   </div>
 
-  <!-- Nav -->
-  <nav class="nav" id="nav-bar">
-    <button class="nav-btn ativo" id="nav-home" onclick="irTela('home')"><span>🏠</span>Perfis</button>
-    <button class="nav-btn oculto" id="nav-docs" onclick="irTela('docs')"><span>📁</span>Documentos</button>
-    <button class="nav-btn oculto" id="nav-novo" onclick="irTela('add-doc')"><span>➕</span>Novo</button>
-    <button class="nav-btn" onclick="sincronizar()"><span>☁️</span>Drive</button>
+  <nav class="nav">
+    <button class="nb" id="nb-h" onclick="go('home')"><span>🏠</span>Perfis</button>
+    <button class="nb hide" id="nb-d" onclick="go('dash')"><span>📊</span>Dashboard</button>
+    <button class="nb hide" id="nb-n" onclick="go('add-d')"><span>➕</span>Novo</button>
+    <button class="nb" onclick="save()"><span>☁️</span>Drive</button>
   </nav>
 </div>
 
+<div class="toast" id="tst"></div>
+
 <script>
-// ── Config ──────────────────────────────────────────────────────────────────
-const CLIENT_ID = "872104274431-4k5603k842orhjkktu1h0db0bk6n55og.apps.googleusercontent.com";
-const SCOPES = "https://www.googleapis.com/auth/drive.appdata";
-const ARQUIVO_NOME = "saude_pessoal.json";
-const CORES = ["#ef4444","#f97316","#eab308","#22c55e","#0ea5e9","#6366f1","#ec4899","#14b8a6"];
-const CATS = {
-  exame:         { label:"Exame",        icon:"🧪", color:"#0ea5e9" },
-  bioimpedancia: { label:"Bioimpedância",icon:"⚖️", color:"#8b5cf6" },
-  atestado:      { label:"Atestado",     icon:"📋", color:"#f59e0b" },
-  receita:       { label:"Receita",      icon:"💊", color:"#ec4899" },
-  outro:         { label:"Outro",        icon:"📎", color:"#64748b" },
+const CID="872104274431-4k5603k842orhjkktu1h0db0bk6n55og.apps.googleusercontent.com";
+const SCOPE="https://www.googleapis.com/auth/drive.appdata";
+const FNAME="hisaude_v3.json";
+const CORES=["#ef4444","#f97316","#eab308","#22c55e","#0ea5e9","#6366f1","#ec4899","#14b8a6"];
+const CATS={
+  ex:{l:"Exames de Sangue",i:"🧪",c:"#2563eb",b:"#eff6ff"},
+  bi:{l:"Bioimpedância",   i:"⚖️",c:"#7c3aed",b:"#f5f3ff"},
+  at:{l:"Atestados",       i:"📋",c:"#ea580c",b:"#fff7ed"},
+  re:{l:"Receitas",        i:"💊",c:"#db2777",b:"#fdf2f8"},
+  ou:{l:"Outros",          i:"📎",c:"#64748b",b:"#f8faff"},
 };
 
-// ── Estado ───────────────────────────────────────────────────────────────────
-let dados = { perfis:[], docs:[] };
-let perfilAtivo = null;
-let telaAtual = "home";
-let filtroAtual = "all";
-let arquivoSelecionado = { data:null, nome:null };
-let corSelecionada = 0;
-let accessToken = null;
-let driveFileId = null;
+let D={perfis:[],docs:[]}, P=null, tela="home", cat="ex";
+let tok=null, fid=null, corSel=0;
+let arq={data:null,nome:null}, vals=[], ch=null;
 
-// ── Google Login ──────────────────────────────────────────────────────────────
-function onGoogleLogin(response) {
-  // Salva o credential e solicita token do Drive via redirect
-  localStorage.setItem('id_token_temp', response.credential);
-  solicitarTokenDrive();
-}
-
-function solicitarTokenDrive() {
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: async (tokenResponse) => {
-      if (tokenResponse.access_token) {
-        accessToken = tokenResponse.access_token;
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app').classList.remove('oculto');
-        await carregarDados();
-        renderHome();
-      }
-    },
-  });
-  // Usar redirect ao invés de popup
-  client.requestAccessToken({ prompt: '' });
-}
-
-// Tenta auto-login se já teve sessão
-function tentarAutoLogin() {
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    prompt: '',
-    callback: async (tokenResponse) => {
-      if (tokenResponse.access_token) {
-        accessToken = tokenResponse.access_token;
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app').classList.remove('oculto');
-        await carregarDados();
-        renderHome();
-      }
-    },
-  });
-  client.requestAccessToken({ prompt: 'none' });
-}
-
-// ── Drive API ─────────────────────────────────────────────────────────────────
-async function buscarArquivoDrive() {
-  const r = await fetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${ARQUIVO_NOME}'&fields=files(id,name)`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  const j = await r.json();
-  return j.files && j.files.length > 0 ? j.files[0].id : null;
-}
-
-async function carregarDados() {
-  try {
-    driveFileId = await buscarArquivoDrive();
-    if (!driveFileId) { mostrarToast("Bem-vindo! Crie seu primeiro perfil 👋","#6366f1",4000); return; }
-    const r = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    dados = await r.json();
-    if (dados.perfis?.length) perfilAtivo = dados.perfis[0];
-    mostrarToast("Dados carregados ✓","#22c55e");
-  } catch(e) { mostrarToast("Erro ao carregar dados","#ef4444"); }
-}
-
-async function salvarDados() {
-  atualizarSubtitulo("⟳ Salvando…");
-  try {
-    const body = JSON.stringify(dados);
-    const blob = new Blob([body], { type:"application/json" });
-    const meta = { name: ARQUIVO_NOME, parents: driveFileId ? undefined : ["appDataFolder"] };
-
-    let url, method;
-    if (driveFileId) {
-      url = `https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=multipart`;
-      method = "PATCH";
-    } else {
-      url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
-      method = "POST";
+// LOGIN
+function login(){
+  google.accounts.oauth2.initTokenClient({client_id:CID,scope:SCOPE,callback:async t=>{
+    if(t.access_token){
+      tok=t.access_token;
+      document.getElementById('login').style.display='none';
+      document.getElementById('app').style.display='block';
+      showSpin();
+      await load();
+      hideSpin();
+      go('home');
     }
-
-    const form = new FormData();
-    form.append("metadata", new Blob([JSON.stringify(meta)], {type:"application/json"}));
-    form.append("file", blob);
-
-    const r = await fetch(url, { method, headers: { Authorization:`Bearer ${accessToken}` }, body: form });
-    const j = await r.json();
-    if (j.id) driveFileId = j.id;
-    mostrarToast("Salvo no Drive ✓","#22c55e");
-  } catch(e) { mostrarToast("Erro ao salvar","#ef4444"); }
-  atualizarSubtitulo("☁️ Google Drive conectado");
+  }}).requestAccessToken({prompt:'select_account'});
 }
 
-// ── UI Helpers ────────────────────────────────────────────────────────────────
-function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
-function iniciais(n=""){ return n.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase(); }
-function fmtData(iso){ return iso ? new Date(iso).toLocaleDateString("pt-BR") : ""; }
-
-function criarAvatar(nome, corIdx, tam=44) {
-  const bg = CORES[corIdx % CORES.length];
-  return `<div class="avatar" style="width:${tam}px;height:${tam}px;background:${bg};font-size:${tam*0.36}px;box-shadow:0 2px 10px ${bg}55;">${iniciais(nome)}</div>`;
+// DRIVE
+async function buscarFid(){
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FNAME}'&fields=files(id)`,{headers:{Authorization:`Bearer ${tok}`}});
+  const j=await r.json(); return j.files?.length?j.files[0].id:null;
+}
+async function load(){
+  try{
+    fid=await buscarFid();
+    if(!fid){toast("Bem-vindo! Crie seu primeiro perfil 👋","#6366f1",4000);return;}
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{headers:{Authorization:`Bearer ${tok}`}});
+    D=await r.json(); if(D.perfis?.length)P=D.perfis[0];
+    toast("Dados carregados ✓","#16a34a");
+  }catch{toast("Erro ao carregar","#ef4444");}
+}
+async function save(){
+  sub("⟳ Salvando…");
+  try{
+    const blob=new Blob([JSON.stringify(D)],{type:"application/json"});
+    const meta={name:FNAME,...(fid?{}:{parents:["appDataFolder"]})};
+    const form=new FormData();
+    form.append("metadata",new Blob([JSON.stringify(meta)],{type:"application/json"}));
+    form.append("file",blob);
+    const r=await fetch(fid?`https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=multipart`:`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`,
+      {method:fid?"PATCH":"POST",headers:{Authorization:`Bearer ${tok}`},body:form});
+    const j=await r.json(); if(j.id)fid=j.id;
+    toast("Salvo no Drive ✓","#16a34a");
+  }catch{toast("Erro ao salvar","#ef4444");}
+  sub("☁️ Google Drive conectado");
 }
 
-function criarPill(color, texto) {
-  return `<span class="pill" style="background:${color}18;border:1px solid ${color}33;color:${color};">${texto}</span>`;
-}
-
-function mostrarToast(msg, cor="#6366f1", ms=3000) {
-  let t = document.getElementById('toast');
-  if (!t) { t = document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
-  t.textContent = msg; t.style.background = cor; t.style.display='block';
-  setTimeout(()=>{ t.style.display='none'; }, ms);
-}
-
-function mostrarSpinner() {
-  ['home','docs','add-doc','add-perfil'].forEach(t => {
-    document.getElementById('tela-'+t).classList.add('oculto');
+// IA
+async function lerIA(b64,tipo){
+  const px=tipo==='bi'
+    ?`Bioimpedância: extraia TODOS os valores (peso, IMC, massa gorda%, massa gorda kg, massa magra, água, metabolismo basal). JSON: {"valores":[{"nome":"...","valor":"...","unidade":"..."},...]}`
+    :tipo==='ex'
+    ?`Exame de sangue: extraia TODOS os valores (hemoglobina, colesterol, LDL, HDL, triglicerídeos, glicose, etc) com referências se disponíveis. JSON: {"valores":[{"nome":"...","valor":"...","unidade":"...","ref":"..."},...]}`
+    :`Documento médico: extraia as principais informações. JSON: {"valores":[{"nome":"...","valor":"...","unidade":"..."},...]}`; 
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:[
+      {type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64.split(',')[1]}},
+      {type:"text",text:px}
+    ]}]})
   });
-  let sp = document.getElementById('spinner-global');
-  if (!sp) {
-    sp = document.createElement('div');
-    sp.id = 'spinner-global';
-    sp.className = 'spinner';
-    sp.innerHTML = '<div class="spinner-circle"></div><div class="spinner-txt">Carregando do Drive…</div>';
-    document.querySelector('.content').prepend(sp);
-  }
-  sp.style.display = 'flex';
-}
-function ocultarSpinner() {
-  const sp = document.getElementById('spinner-global');
-  if (sp) sp.style.display = 'none';
+  const j=await r.json();
+  const txt=j.content?.[0]?.text||"";
+  const m=txt.match(/\{[\s\S]*\}/);
+  if(m){const p=JSON.parse(m[0]);return p.valores||[];}
+  return [];
 }
 
-function atualizarSubtitulo(txt) { document.getElementById('header-sub').textContent = txt; }
-
-function sincronizar() { salvarDados(); }
-
-// ── Navegação ─────────────────────────────────────────────────────────────────
-function irTela(tela) {
-  ['home','docs','add-doc','add-perfil'].forEach(t => {
-    document.getElementById('tela-'+t).classList.add('oculto');
-  });
-  document.getElementById('tela-'+tela).classList.remove('oculto');
-  telaAtual = tela;
-
-  // Header
-  const titulos = { home:"💙 Saúde Pessoal", docs: perfilAtivo?.nome||"Documentos", "add-doc":"Novo Documento", "add-perfil":"Novo Perfil" };
-  document.getElementById('header-titulo').textContent = titulos[tela];
-
-  // Botão voltar
-  const voltarBtn = document.getElementById('btn-voltar');
-  voltarBtn.classList.toggle('oculto', tela==='home');
-
-  // Sync btn
-  document.getElementById('btn-sync').classList.toggle('oculto', tela!=='home');
-
-  // Nav
-  document.getElementById('nav-home').className = 'nav-btn' + (tela==='home'?' ativo':'');
-  document.getElementById('nav-docs').className = 'nav-btn' + (tela==='docs'?' ativo':'') + (perfilAtivo?'':' oculto');
-  document.getElementById('nav-novo').className = 'nav-btn' + (tela==='add-doc'?' ativo':'') + (perfilAtivo?'':' oculto');
-
-  if (tela==='docs') renderDocs();
-  if (tela==='home') renderHome();
-  if (tela==='add-perfil') renderCorPicker();
-}
-
-function voltar() {
-  if (telaAtual==='add-doc') irTela('docs');
-  else irTela('home');
-}
-
-// ── Render Home ───────────────────────────────────────────────────────────────
-function renderHome() {
-  document.getElementById('hero-count').textContent =
-    `${dados.perfis.length} perfil${dados.perfis.length!==1?'s':''} • ${dados.docs.length} documento${dados.docs.length!==1?'s':''}`;
-
-  const lista = document.getElementById('lista-perfis');
-  if (!dados.perfis.length) {
-    lista.innerHTML = `<div class="card" style="text-align:center;color:#94a3b8;padding:28px;font-size:13px;">Nenhum perfil ainda. Adicione o primeiro! 👇</div>`;
-    return;
-  }
-  lista.innerHTML = dados.perfis.map(p => {
-    const ndocs = dados.docs.filter(d=>d.perfilId===p.id).length;
-    const ativo = perfilAtivo?.id===p.id;
-    return `<div class="card flex-row ${ativo?'ativo':''}" onclick="selecionarPerfil('${p.id}')" style="cursor:pointer;">
-      ${criarAvatar(p.nome, p.corIdx)}
-      <div class="flex-1">
-        <div style="font-weight:800;font-size:15px;">${p.nome}</div>
-        <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${p.nascimento?fmtData(p.nascimento):'Sem data'}${p.sexo?' • '+p.sexo:''}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-        ${criarPill('#6366f1', ndocs+' docs')}
-        <span style="font-size:18px;color:#94a3b8;">›</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function selecionarPerfil(id) {
-  perfilAtivo = dados.perfis.find(p=>p.id===id);
-  irTela('docs');
-}
-
-// ── Render Docs ───────────────────────────────────────────────────────────────
-function renderDocs() {
-  // Card do perfil
-  const pc = document.getElementById('perfil-card');
-  pc.innerHTML = `${criarAvatar(perfilAtivo.nome, perfilAtivo.corIdx, 50)}
-    <div class="flex-1">
-      <div style="font-weight:800;font-size:16px;">${perfilAtivo.nome}</div>
-      <div style="font-size:12px;color:#475569;">${perfilAtivo.nascimento?fmtData(perfilAtivo.nascimento):''}${perfilAtivo.sexo?' • '+perfilAtivo.sexo:''}</div>
-    </div>
-    <button class="btn-delete" onclick="removerPerfil('${perfilAtivo.id}')">🗑</button>`;
-
-  // Filtros
-  const filtros = document.getElementById('filtros');
-  const todos = [{id:'all',label:'Todos',icon:'📂',color:'#64748b'}, ...Object.entries(CATS).map(([id,c])=>({id,...c}))];
-  filtros.innerHTML = todos.map(c =>
-    `<button class="filtro-btn ${filtroAtual===c.id?'ativo':''}" style="--cor:${c.color}" onclick="setFiltro('${c.id}')">${c.icon} ${c.label}</button>`
-  ).join('');
-
-  // Docs
-  renderListaDocs();
-}
-
-function setFiltro(f) { filtroAtual = f; renderDocs(); }
-
-function renderListaDocs() {
-  const docsFiltrados = dados.docs
-    .filter(d=>d.perfilId===perfilAtivo?.id)
-    .filter(d=>filtroAtual==='all'||d.categoria===filtroAtual);
-
-  const lista = document.getElementById('lista-docs');
-  if (!docsFiltrados.length) {
-    lista.innerHTML = `<div class="card" style="text-align:center;color:#94a3b8;padding:28px;font-size:13px;">Nenhum documento nesta categoria.</div>`;
-    return;
-  }
-  lista.innerHTML = docsFiltrados.map(doc => {
-    const cat = CATS[doc.categoria]||CATS.outro;
-    return `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-            ${criarPill(cat.color, cat.icon+' '+cat.label)}
-            ${doc.data?`<span style="font-size:11px;color:#94a3b8;font-weight:700;">${fmtData(doc.data)}</span>`:''}
-          </div>
-          <div style="font-weight:800;font-size:14px;margin-bottom:4px;">${doc.nome}</div>
-          ${doc.obs?`<div style="font-size:12px;color:#475569;line-height:1.5;">${doc.obs}</div>`:''}
-          ${doc.fileName?`<a href="${doc.fileData}" download="${doc.fileName}" style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;font-size:12px;color:#6366f1;text-decoration:none;font-weight:700;">📎 ${doc.fileName}</a>`:''}
-        </div>
-        <button class="btn-delete" onclick="removerDoc('${doc.id}')">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── Perfis ────────────────────────────────────────────────────────────────────
-function renderCorPicker() {
-  const picker = document.getElementById('cor-picker');
-  picker.innerHTML = CORES.map((c,i) =>
-    `<div class="cor-circulo ${corSelecionada===i?'selecionado':''}" style="background:${c};" onclick="selecionarCor(${i})"></div>`
-  ).join('');
-  atualizarPreviewAvatar();
-}
-
-function selecionarCor(i) { corSelecionada = i; renderCorPicker(); }
-
-function atualizarPreviewAvatar() {
-  const nome = document.getElementById('perfil-nome')?.value||'';
-  const prev = document.getElementById('avatar-preview');
-  if (nome && prev) prev.innerHTML = criarAvatar(nome, corSelecionada, 56);
-}
-
-function salvarPerfil() {
-  const nome = document.getElementById('perfil-nome').value.trim();
-  if (!nome) { mostrarToast("Digite o nome!","#ef4444"); return; }
-  const p = {
-    id: uid(), nome,
-    nascimento: document.getElementById('perfil-nasc').value,
-    sexo: document.getElementById('perfil-sexo').value,
-    corIdx: corSelecionada,
-  };
-  dados.perfis.push(p);
-  if (!perfilAtivo) perfilAtivo = p;
-  salvarDados();
-  document.getElementById('perfil-nome').value='';
-  document.getElementById('perfil-nasc').value='';
-  document.getElementById('perfil-sexo').value='';
-  irTela('home');
-}
-
-function removerPerfil(id) {
-  if (!confirm("Remover este perfil e todos os seus documentos?")) return;
-  dados.perfis = dados.perfis.filter(p=>p.id!==id);
-  dados.docs = dados.docs.filter(d=>d.perfilId!==id);
-  perfilAtivo = dados.perfis[0]||null;
-  salvarDados();
-  irTela('home');
-}
-
-// ── Documentos ────────────────────────────────────────────────────────────────
-function lerArquivo(input) {
-  const f = input.files[0]; if (!f) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    arquivoSelecionado = { data: e.target.result, nome: f.name };
-    document.getElementById('btn-arquivo').textContent = '📎 ' + f.name;
+async function handleFile(inp){
+  const f=inp.files[0];if(!f)return;
+  document.getElementById('up-txt').textContent="📎 "+f.name;
+  document.getElementById('arq-prev').textContent="📎 "+f.name;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    arq={data:e.target.result,nome:f.name};
+    if(f.type.startsWith('image/')||f.type==='application/pdf'){
+      document.getElementById('ia-box').classList.remove('hide');
+      document.getElementById('area-vals').classList.add('hide');
+      try{
+        const tipo=document.getElementById('d-cat').value;
+        vals=await lerIA(e.target.result,tipo);
+        renderVals(vals);
+        toast(`✅ ${vals.length} valores identificados!`,"#16a34a");
+      }catch{vals=[];renderVals([]);toast("Adicione os valores manualmente","#f59e0b");}
+      document.getElementById('ia-box').classList.add('hide');
+      document.getElementById('area-vals').classList.remove('hide');
+    }
   };
   reader.readAsDataURL(f);
 }
 
-function salvarDoc() {
-  const nome = document.getElementById('doc-nome').value.trim();
-  if (!nome) { mostrarToast("Digite o nome!","#ef4444"); return; }
-  const doc = {
-    id: uid(), perfilId: perfilAtivo.id,
-    nome, categoria: document.getElementById('doc-cat').value,
-    data: document.getElementById('doc-data').value,
-    obs: document.getElementById('doc-obs').value,
-    fileData: arquivoSelecionado.data,
-    fileName: arquivoSelecionado.nome,
-    criadoEm: new Date().toISOString(),
-  };
-  dados.docs.push(doc);
-  salvarDados();
-  // limpar
-  document.getElementById('doc-nome').value='';
-  document.getElementById('doc-data').value='';
-  document.getElementById('doc-obs').value='';
-  document.getElementById('btn-arquivo').textContent='📂 Selecionar arquivo';
-  arquivoSelecionado = { data:null, nome:null };
-  irTela('docs');
+function renderVals(vs){
+  document.getElementById('vals-form').innerHTML=vs.map((v,i)=>`
+    <div class="val-row">
+      <input class="inp" placeholder="Nome" value="${v.nome||''}" id="vn${i}" style="flex:2;"/>
+      <input class="inp" placeholder="Valor" value="${v.valor||''}" id="vv${i}" style="flex:1;"/>
+      <input class="inp" placeholder="Unid." value="${v.unidade||''}" id="vu${i}" style="flex:1;"/>
+      <button onclick="delVal(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;flex-shrink:0;">✕</button>
+    </div>`).join('');
 }
-
-function removerDoc(id) {
-  if (!confirm("Remover este documento?")) return;
-  dados.docs = dados.docs.filter(d=>d.id!==id);
-  salvarDados();
-  renderListaDocs();
-}
-
-// ── Login direto ─────────────────────────────────────────────────────────────
-function iniciarLogin() {
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: async (tokenResponse) => {
-      if (tokenResponse.access_token) {
-        accessToken = tokenResponse.access_token;
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app').classList.remove('oculto');
-        await carregarDados();
-        renderHome();
-      }
-    },
+function addValRow(){vals.push({nome:'',valor:'',unidade:''});renderVals(vals);}
+function delVal(i){vals.splice(i,1);renderVals(vals);}
+function getVals(){
+  const vs=[];
+  document.querySelectorAll('.val-row').forEach((r,i)=>{
+    const n=document.getElementById('vn'+i)?.value?.trim();
+    const v=document.getElementById('vv'+i)?.value?.trim();
+    const u=document.getElementById('vu'+i)?.value?.trim();
+    if(n||v)vs.push({nome:n,valor:v,unidade:u});
   });
-  client.requestAccessToken({ prompt: 'select_account' });
+  return vs;
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-document.getElementById('perfil-nome')?.addEventListener('input', atualizarPreviewAvatar);
-</script>
+// CRUD
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const ini=n=>n.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+const fmt=iso=>iso?new Date(iso).toLocaleDateString("pt-BR"):"";
 
+function saveP(){
+  const nome=document.getElementById('p-nome').value.trim();
+  if(!nome){toast("Digite o nome!","#ef4444");return;}
+  const p={id:uid(),nome,nasc:document.getElementById('p-nasc').value,sx:document.getElementById('p-sx').value,c:corSel};
+  D.perfis.push(p);if(!P)P=p;
+  save();document.getElementById('p-nome').value='';go('home');
+}
+function delP(id){
+  if(!confirm("Remover este perfil e todos os documentos?"))return;
+  D.perfis=D.perfis.filter(p=>p.id!==id);D.docs=D.docs.filter(d=>d.pid!==id);
+  if(P?.id===id)P=D.perfis[0]||null;save();go('home');
+}
+function saveDoc(){
+  if(!P){toast("Selecione um perfil!","#ef4444");return;}
+  const doc={id:uid(),pid:P.id,cat:document.getElementById('d-cat').value,dt:document.getElementById('d-dt').value,ob:document.getElementById('d-ob').value,vals:getVals(),fd:arq.data,fn:arq.nome,ts:new Date().toISOString()};
+  D.docs.push(doc);save();
+  arq={data:null,nome:null};vals=[];
+  ['d-ob','d-dt'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('vals-form').innerHTML='';
+  document.getElementById('up-txt').textContent='Toque para selecionar';
+  document.getElementById('arq-prev').textContent='';
+  go('dash');
+}
+function delDoc(id){
+  if(!confirm("Remover?"))return;
+  D.docs=D.docs.filter(d=>d.id!==id);save();renderCat();
+}
+
+// RENDER
+function renderHome(){
+  const el=document.getElementById('lista-p');
+  if(!D.perfis.length){el.innerHTML=`<div class="card" style="text-align:center;color:var(--tx3);padding:28px;font-size:13px;">Nenhum perfil ainda. Adicione o primeiro! 👇</div>`;return;}
+  el.innerHTML=D.perfis.map(p=>{
+    const bg=CORES[p.c%CORES.length];const n=D.docs.filter(d=>d.pid===p.id).length;const on=P?.id===p.id;
+    return `<div class="card fr ${on?'on':''}" onclick="selP('${p.id}')" style="cursor:pointer;margin-bottom:8px;">
+      <div class="avatar" style="width:46px;height:46px;background:${bg};font-size:16px;box-shadow:0 2px 10px ${bg}55;">${ini(p.nome)}</div>
+      <div class="f1"><div style="font-weight:800;font-size:15px;">${p.nome}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;">${p.nasc?fmt(p.nasc):''}${p.sx?' • '+p.sx:''}</div></div>
+      <div style="text-align:right;"><span style="background:var(--azul-s);color:var(--azul);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:800;">${n} docs</span><div style="font-size:20px;color:var(--tx3);">›</div></div>
+    </div>`;
+  }).join('');
+}
+function selP(id){P=D.perfis.find(p=>p.id===id);go('dash');}
+
+function renderDash(){
+  if(!P)return;
+  document.getElementById('d-nome').textContent=P.nome+'!';
+  const docs=D.docs.filter(d=>d.pid===P.id);
+  document.getElementById('s-ex').textContent=docs.filter(d=>d.cat==='ex').length;
+  document.getElementById('s-bi').textContent=docs.filter(d=>d.cat==='bi').length;
+  document.getElementById('s-al').textContent=docs.length;
+  document.getElementById('quadros').innerHTML=Object.entries(CATS).map(([id,c])=>{
+    const ds=docs.filter(d=>d.cat===id).sort((a,b)=>new Date(b.dt)-new Date(a.dt));
+    const u=ds[0];
+    return `<div class="quad" onclick="openCat('${id}')">
+      <div class="fr" style="gap:8px;margin-bottom:8px;">
+        <div class="qi" style="background:${c.b};color:${c.c};">${c.i}</div>
+        <div><div class="qt">${c.l}</div><div class="qc">${ds.length} registro${ds.length!==1?'s':''}</div></div>
+      </div>
+      ${u?`<div class="qd">Último: ${fmt(u.dt)}</div>${(u.vals?.slice(0,2)||[]).map(v=>`<div class="qi-txt">• ${v.nome}: <b>${v.valor}${v.unidade?' '+v.unidade:''}</b></div>`).join('')}`:`<div class="qi-txt" style="color:var(--tx3);">Nenhum registro ainda</div>`}
+    </div>`;
+  }).join('');
+}
+function openCat(id){cat=id;go('cat');}
+
+function renderCat(){
+  const c=CATS[cat];document.getElementById('cat-lbl').textContent=c.l;
+  const docs=D.docs.filter(d=>d.pid===P?.id&&d.cat===cat).sort((a,b)=>new Date(a.dt)-new Date(b.dt));
+  const area=document.getElementById('chart-area');
+  if(ch){ch.destroy();ch=null;}
+
+  if(docs.length>1){
+    const nomes=new Set();docs.forEach(d=>d.vals?.forEach(v=>v.nome&&nomes.add(v.nome)));
+    const ns=[...nomes].slice(0,8);
+    if(ns.length){
+      area.innerHTML=`<div class="chart-wrap"><div class="chart-t">📈 Evolução — ${c.l}</div>${ns.length>1?`<select class="chart-sel" id="csel" onchange="updChart()">${ns.map(n=>`<option>${n}</option>`).join('')}</select>`:''}<canvas id="myChart"></canvas></div>`;
+      drawChart(docs,ns[0]);window._nd=docs;window._nn=ns;
+    }else area.innerHTML='';
+  }else area.innerHTML='';
+
+  const lista=document.getElementById('lista-c');
+  if(!docs.length){lista.innerHTML=`<div class="card" style="text-align:center;color:var(--tx3);padding:24px;font-size:13px;">Nenhum documento ainda.</div>`;return;}
+  lista.innerHTML=[...docs].reverse().map(doc=>`
+    <div class="doc-card">
+      <div class="dc-top">
+        <div class="f1"><div class="dc-titulo">${c.i} ${fmt(doc.dt)||'Sem data'}</div>${doc.ob?`<div class="dc-meta">${doc.ob}</div>`:''}</div>
+        <div class="fr" style="gap:8px;">${doc.fn?`<a href="${doc.fd}" download="${doc.fn}" style="font-size:18px;text-decoration:none;">📎</a>`:''}<button class="btn-del" onclick="delDoc('${doc.id}')">🗑</button></div>
+      </div>
+      ${doc.vals?.length?`<div class="dc-vals">${doc.vals.map(v=>`<div class="vr"><span class="vr-n">${v.nome}</span><span class="vr-v">${v.valor}${v.unidade?' '+v.unidade:''}</span></div>`).join('')}</div>`:''}</div>`).join('');
+}
+
+function drawChart(docs,ind){
+  const ctx=document.getElementById('myChart');if(!ctx)return;
+  if(ch)ch.destroy();
+  const c=CATS[cat];const labels=[],vals=[];
+  docs.forEach(d=>{const v=d.vals?.find(v=>v.nome===ind);if(v&&!isNaN(parseFloat(v.valor))){labels.push(fmt(d.dt));vals.push(parseFloat(v.valor));}});
+  ch=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:ind,data:vals,borderColor:c.c,backgroundColor:c.c+'22',borderWidth:2.5,pointBackgroundColor:c.c,pointRadius:5,tension:.4,fill:true}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f1f5fb'},ticks:{font:{size:11,weight:'700'}}},x:{grid:{display:false},ticks:{font:{size:10,weight:'700'}}}}}});
+}
+function updChart(){const s=document.getElementById('csel')?.value;if(s)drawChart(window._nd,s);}
+
+// NAV
+function go(t){
+  ['home','dash','cat','add-d','add-p'].forEach(x=>document.getElementById('t-'+x).classList.add('hide'));
+  document.getElementById('t-'+t).classList.remove('hide');
+  tela=t;
+  const titles={home:"💙 Saúde Pessoal",dash:P?.nome||"Dashboard",cat:CATS[cat]?.l||"Documentos","add-d":"Novo Documento","add-p":"Novo Perfil"};
+  document.getElementById('htit').textContent=titles[t]||t;
+  document.getElementById('bbk').classList.toggle('hide',t==='home');
+  document.getElementById('bsync').classList.toggle('hide',t!=='home'&&t!=='dash');
+  const hp=!!P;
+  document.getElementById('nb-h').className='nb'+(t==='home'?' on':'');
+  document.getElementById('nb-d').className='nb'+(t==='dash'?' on':'')+(hp?'':' hide');
+  document.getElementById('nb-n').className='nb'+(t==='add-d'?' on':'')+(hp?'':' hide');
+  if(t==='home')renderHome();
+  if(t==='dash')renderDash();
+  if(t==='cat')renderCat();
+  if(t==='add-p')renderCP();
+  if(t==='add-d'){vals=[];renderVals([]);document.getElementById('ia-box').classList.add('hide');document.getElementById('area-vals').classList.remove('hide');}
+}
+function voltar(){
+  if(tela==='cat')go('dash');
+  else if(tela==='add-d')go(P?'dash':'home');
+  else if(tela==='add-p')go('home');
+  else go('home');
+}
+
+// PERFIL UI
+function renderCP(){
+  document.getElementById('cp').innerHTML=CORES.map((c,i)=>`<div class="cc ${corSel===i?'on':''}" style="background:${c};" onclick="selC(${i})"></div>`).join('');
+  prevAv();
+}
+function selC(i){corSel=i;renderCP();}
+function prevAv(){
+  const n=document.getElementById('p-nome')?.value||'';const bg=CORES[corSel%CORES.length];
+  document.getElementById('av-prev').innerHTML=n?`<div class="avatar" style="width:50px;height:50px;background:${bg};font-size:18px;">${ini(n)}</div>`:'';
+}
+
+// UTILS
+function toast(msg,cor="#6366f1",ms=3000){const t=document.getElementById('tst');t.textContent=msg;t.style.background=cor;t.style.display='block';setTimeout(()=>t.style.display='none',ms);}
+function sub(txt){document.getElementById('hsub').textContent=txt;}
+function showSpin(){document.getElementById('t-home').innerHTML='<div class="spinner"><div class="sc"></div><div class="st">Carregando do Drive…</div></div>';}
+function hideSpin(){renderHome();}
+</script>
 </body>
 </html>
