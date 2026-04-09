@@ -2,238 +2,526 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
 <title>💙 Saúde Pessoal</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@0,600;1,400&display=swap" rel="stylesheet"/>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer>
+// ── Análises ──────────────────────────────────────────────────────────────────
+const REFS = {
+  // Exames de sangue — valores de referência
+  'Colesterol Total':  {min:0,  max:200, unit:'mg/dL'},
+  'LDL':               {min:0,  max:130, unit:'mg/dL'},
+  'HDL':               {min:40, max:999, unit:'mg/dL', inverso:true},
+  'Triglicerídeos':    {min:0,  max:150, unit:'mg/dL'},
+  'Glicose':           {min:70, max:99,  unit:'mg/dL'},
+  'Hemoglobina':       {min:12, max:17,  unit:'g/dL'},
+  'Hematócrito':       {min:36, max:50,  unit:'%'},
+  'TSH':               {min:0.4,max:4.0, unit:'mUI/L'},
+  'Vitamina D':        {min:30, max:100, unit:'ng/mL'},
+  'Ferritina':         {min:12, max:300, unit:'ng/mL'},
+  'Creatinina':        {min:0.6,max:1.2, unit:'mg/dL'},
+  'Ureia':             {min:15, max:45,  unit:'mg/dL'},
+  // Bioimpedância
+  'IMC':               {min:18.5,max:24.9,unit:'kg/m²'},
+  'Massa Gorda':       {min:0,  max:25,  unit:'%'},
+  'Água Corporal':     {min:50, max:70,  unit:'%', inverso:true},
+};
+
+function statusValor(nome, valor) {
+  const v = parseFloat(valor);
+  if (isNaN(v)) return null;
+  // Busca referência por nome parcial
+  const chave = Object.keys(REFS).find(k => nome?.toLowerCase().includes(k.toLowerCase()));
+  if (!chave) return null;
+  const ref = REFS[chave];
+  if (ref.inverso) {
+    if (v >= ref.min) return 'ok';
+    return 'lo';
+  }
+  if (v < ref.min) return 'lo';
+  if (v > ref.max) return 'hi';
+  return 'ok';
+}
+
+function badgeStatus(s) {
+  if (!s) return '';
+  if (s==='ok') return '<span class="badge badge-ok">✅ Normal</span>';
+  if (s==='hi') return '<span class="badge badge-up">⚠️ Acima</span>';
+  if (s==='lo') return '<span class="badge badge-dn">⚠️ Abaixo</span>';
+  return '';
+}
+
+function calcTendencia(docs, nome) {
+  // Pega os 2 últimos valores de um indicador
+  const vs = docs
+    .filter(d=>d.vals?.some(v=>v.nome===nome))
+    .sort((a,b)=>new Date(a.dt)-new Date(b.dt))
+    .map(d=>d.vals.find(v=>v.nome===nome));
+  if (vs.length < 2) return null;
+  const ant = parseFloat(vs[vs.length-2]?.valor);
+  const ult = parseFloat(vs[vs.length-1]?.valor);
+  if (isNaN(ant)||isNaN(ult)) return null;
+  const diff = ult - ant;
+  const pct = Math.abs((diff/ant)*100).toFixed(1);
+  return {ant, ult, diff, pct};
+}
+
+function renderAnalise(catId) {
+  const c = CATS[catId];
+  const docs = D.docs.filter(d=>d.pid===P?.id&&d.cat===catId).sort((a,b)=>new Date(a.dt)-new Date(b.dt));
+  if (!docs.length) return '';
+
+  const ult = docs[docs.length-1];
+  const pen = docs.length>1 ? docs[docs.length-2] : null;
+
+  // Gera análise de cada valor do último exame
+  let html = `<div class="anl-card"><div class="anl-tit">${c.i} Análise — ${fmt(ult.dt)}</div>`;
+
+  if (ult.vals?.length) {
+    html += '<div class="comp-box">';
+    ult.vals.forEach(v => {
+      const st = statusValor(v.nome, v.valor);
+      const classRef = st==='ok'?'ref-ok':st==='hi'?'ref-hi':st==='lo'?'ref-lo':'';
+
+      // Tendência vs exame anterior
+      let arr = '', diffTxt = '';
+      if (pen) {
+        const vAnt = pen.vals?.find(va=>va.nome===v.nome);
+        if (vAnt) {
+          const diff = parseFloat(v.valor) - parseFloat(vAnt.valor);
+          if (!isNaN(diff)) {
+            if (diff > 0) { arr = '↑'; diffTxt = `+${diff.toFixed(1)}`; }
+            else if (diff < 0) { arr = '↓'; diffTxt = `${diff.toFixed(1)}`; }
+            else { arr = '→'; diffTxt = '='; }
+          }
+        }
+      }
+
+      html += `<div class="comp-row">
+        <span class="comp-n">${v.nome}</span>
+        <span class="comp-v ${classRef}">${v.valor}${v.unidade?' '+v.unidade:''}</span>
+        ${arr?`<span class="comp-arr" style="color:${arr==='↑'?'#dc2626':arr==='↓'?'#16a34a':'#6366f1'}">${arr} ${diffTxt}</span>`:''}
+      </div>`;
+    });
+    html += '</div>';
+
+    // Badge geral
+    const problemas = ult.vals.filter(v=>statusValor(v.nome,v.valor)==='hi'||statusValor(v.nome,v.valor)==='lo');
+    if (problemas.length===0 && ult.vals.some(v=>statusValor(v.nome,v.valor)==='ok')) {
+      html += '<span class="badge badge-ok">✅ Todos os valores normais</span>';
+    } else if (problemas.length>0) {
+      html += `<span class="badge badge-up">⚠️ ${problemas.length} valor${problemas.length>1?'es':''} fora do padrão</span>`;
+    }
+
+    // Evolução positiva?
+    if (pen) {
+      const melhorou = ult.vals.filter(v=>{
+        const vA=pen.vals?.find(a=>a.nome===v.nome);
+        if(!vA)return false;
+        const stNow=statusValor(v.nome,v.valor), stOld=statusValor(v.nome,vA.valor);
+        return stNow==='ok' && stOld!=='ok';
+      }).length;
+      if (melhorou>0) html += `<span class="badge badge-ok" style="margin-left:4px;">📈 ${melhorou} valor${melhorou>1?'es':''} melhorou${melhorou>1?'ram':''}</span>`;
+    }
+  }
+
+  html += '</div>';
+  return html;
+}
+
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js">
+// ── Análises ──────────────────────────────────────────────────────────────────
+const REFS = {
+  // Exames de sangue — valores de referência
+  'Colesterol Total':  {min:0,  max:200, unit:'mg/dL'},
+  'LDL':               {min:0,  max:130, unit:'mg/dL'},
+  'HDL':               {min:40, max:999, unit:'mg/dL', inverso:true},
+  'Triglicerídeos':    {min:0,  max:150, unit:'mg/dL'},
+  'Glicose':           {min:70, max:99,  unit:'mg/dL'},
+  'Hemoglobina':       {min:12, max:17,  unit:'g/dL'},
+  'Hematócrito':       {min:36, max:50,  unit:'%'},
+  'TSH':               {min:0.4,max:4.0, unit:'mUI/L'},
+  'Vitamina D':        {min:30, max:100, unit:'ng/mL'},
+  'Ferritina':         {min:12, max:300, unit:'ng/mL'},
+  'Creatinina':        {min:0.6,max:1.2, unit:'mg/dL'},
+  'Ureia':             {min:15, max:45,  unit:'mg/dL'},
+  // Bioimpedância
+  'IMC':               {min:18.5,max:24.9,unit:'kg/m²'},
+  'Massa Gorda':       {min:0,  max:25,  unit:'%'},
+  'Água Corporal':     {min:50, max:70,  unit:'%', inverso:true},
+};
+
+function statusValor(nome, valor) {
+  const v = parseFloat(valor);
+  if (isNaN(v)) return null;
+  // Busca referência por nome parcial
+  const chave = Object.keys(REFS).find(k => nome?.toLowerCase().includes(k.toLowerCase()));
+  if (!chave) return null;
+  const ref = REFS[chave];
+  if (ref.inverso) {
+    if (v >= ref.min) return 'ok';
+    return 'lo';
+  }
+  if (v < ref.min) return 'lo';
+  if (v > ref.max) return 'hi';
+  return 'ok';
+}
+
+function badgeStatus(s) {
+  if (!s) return '';
+  if (s==='ok') return '<span class="badge badge-ok">✅ Normal</span>';
+  if (s==='hi') return '<span class="badge badge-up">⚠️ Acima</span>';
+  if (s==='lo') return '<span class="badge badge-dn">⚠️ Abaixo</span>';
+  return '';
+}
+
+function calcTendencia(docs, nome) {
+  // Pega os 2 últimos valores de um indicador
+  const vs = docs
+    .filter(d=>d.vals?.some(v=>v.nome===nome))
+    .sort((a,b)=>new Date(a.dt)-new Date(b.dt))
+    .map(d=>d.vals.find(v=>v.nome===nome));
+  if (vs.length < 2) return null;
+  const ant = parseFloat(vs[vs.length-2]?.valor);
+  const ult = parseFloat(vs[vs.length-1]?.valor);
+  if (isNaN(ant)||isNaN(ult)) return null;
+  const diff = ult - ant;
+  const pct = Math.abs((diff/ant)*100).toFixed(1);
+  return {ant, ult, diff, pct};
+}
+
+function renderAnalise(catId) {
+  const c = CATS[catId];
+  const docs = D.docs.filter(d=>d.pid===P?.id&&d.cat===catId).sort((a,b)=>new Date(a.dt)-new Date(b.dt));
+  if (!docs.length) return '';
+
+  const ult = docs[docs.length-1];
+  const pen = docs.length>1 ? docs[docs.length-2] : null;
+
+  // Gera análise de cada valor do último exame
+  let html = `<div class="anl-card"><div class="anl-tit">${c.i} Análise — ${fmt(ult.dt)}</div>`;
+
+  if (ult.vals?.length) {
+    html += '<div class="comp-box">';
+    ult.vals.forEach(v => {
+      const st = statusValor(v.nome, v.valor);
+      const classRef = st==='ok'?'ref-ok':st==='hi'?'ref-hi':st==='lo'?'ref-lo':'';
+
+      // Tendência vs exame anterior
+      let arr = '', diffTxt = '';
+      if (pen) {
+        const vAnt = pen.vals?.find(va=>va.nome===v.nome);
+        if (vAnt) {
+          const diff = parseFloat(v.valor) - parseFloat(vAnt.valor);
+          if (!isNaN(diff)) {
+            if (diff > 0) { arr = '↑'; diffTxt = `+${diff.toFixed(1)}`; }
+            else if (diff < 0) { arr = '↓'; diffTxt = `${diff.toFixed(1)}`; }
+            else { arr = '→'; diffTxt = '='; }
+          }
+        }
+      }
+
+      html += `<div class="comp-row">
+        <span class="comp-n">${v.nome}</span>
+        <span class="comp-v ${classRef}">${v.valor}${v.unidade?' '+v.unidade:''}</span>
+        ${arr?`<span class="comp-arr" style="color:${arr==='↑'?'#dc2626':arr==='↓'?'#16a34a':'#6366f1'}">${arr} ${diffTxt}</span>`:''}
+      </div>`;
+    });
+    html += '</div>';
+
+    // Badge geral
+    const problemas = ult.vals.filter(v=>statusValor(v.nome,v.valor)==='hi'||statusValor(v.nome,v.valor)==='lo');
+    if (problemas.length===0 && ult.vals.some(v=>statusValor(v.nome,v.valor)==='ok')) {
+      html += '<span class="badge badge-ok">✅ Todos os valores normais</span>';
+    } else if (problemas.length>0) {
+      html += `<span class="badge badge-up">⚠️ ${problemas.length} valor${problemas.length>1?'es':''} fora do padrão</span>`;
+    }
+
+    // Evolução positiva?
+    if (pen) {
+      const melhorou = ult.vals.filter(v=>{
+        const vA=pen.vals?.find(a=>a.nome===v.nome);
+        if(!vA)return false;
+        const stNow=statusValor(v.nome,v.valor), stOld=statusValor(v.nome,vA.valor);
+        return stNow==='ok' && stOld!=='ok';
+      }).length;
+      if (melhorou>0) html += `<span class="badge badge-ok" style="margin-left:4px;">📈 ${melhorou} valor${melhorou>1?'es':''} melhorou${melhorou>1?'ram':''}</span>`;
+    }
+  }
+
+  html += '</div>';
+  return html;
+}
+
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-:root{--azul:#2563eb;--azul-s:#eff6ff;--azul-m:#bfdbfe;--verde:#16a34a;--verde-s:#f0fdf4;--laranja:#ea580c;--laranja-s:#fff7ed;--rosa:#db2777;--rosa-s:#fdf2f8;--roxo:#7c3aed;--roxo-s:#f5f3ff;--cinza:#64748b;--borda:#e2e8f0;--bg:#f8faff;--card:#fff;--tx:#1e293b;--tx2:#475569;--tx3:#94a3b8;}
-body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--tx);}
+body{background:#f8faff;font-family:'Nunito',sans-serif;color:#1e293b;}
 input,select,textarea,button{font-family:'Nunito',sans-serif;}
-::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:var(--borda);border-radius:3px;}
 @keyframes spin{to{transform:rotate(360deg);}}
-@keyframes up{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes up{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
-#login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;background:linear-gradient(160deg,#eff6ff,#f0fdf4);}
-.l-logo{font-size:60px;margin-bottom:16px;animation:up .5s ease;}
-.l-title{font-family:'Lora',serif;font-size:28px;font-weight:600;margin-bottom:8px;animation:up .5s .1s ease both;}
-.l-sub{color:var(--tx2);font-size:14px;margin-bottom:36px;font-weight:600;line-height:1.7;animation:up .5s .2s ease both;}
-.btn-g{background:#fff;border:1.5px solid var(--borda);border-radius:14px;padding:14px 28px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.08);animation:up .5s .3s ease both;}
+/* LOGIN */
+#pg-login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:linear-gradient(160deg,#eff6ff,#f0fdf4);}
+.l-ico{font-size:60px;margin-bottom:16px;}
+.l-tit{font-family:'Lora',serif;font-size:28px;font-weight:600;margin-bottom:8px;}
+.l-sub{color:#475569;font-size:14px;margin-bottom:36px;font-weight:600;line-height:1.7;}
+.btn-g{background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,0.08);}
 
-#app{display:none;min-height:100vh;padding-bottom:76px;}
-.hdr{background:var(--card);border-bottom:1px solid var(--borda);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(37,99,235,0.05);}
+/* APP */
+#pg-app{display:none;min-height:100vh;padding-bottom:76px;}
+
+/* HEADER */
+.hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 6px rgba(37,99,235,0.05);}
 .hdr-l{display:flex;align-items:center;gap:6px;}
-.hdr-t{font-size:16px;font-weight:800;}
-.hdr-s{font-size:10px;color:var(--tx3);font-weight:700;margin-top:1px;}
-.btn-bk{background:none;border:none;color:var(--tx2);font-size:26px;cursor:pointer;padding:0 4px 0 0;line-height:1;}
-.btn-sm{background:var(--azul-s);border:none;border-radius:10px;padding:6px 12px;color:var(--azul);font-weight:800;font-size:12px;cursor:pointer;}
+.hdr-tit{font-size:16px;font-weight:800;}
+.hdr-sub{font-size:10px;color:#94a3b8;font-weight:700;margin-top:1px;}
+.btn-bk{background:none;border:none;color:#475569;font-size:26px;cursor:pointer;line-height:1;padding:0 4px 0 0;}
+.btn-sm{background:#eff6ff;border:none;border-radius:10px;padding:6px 12px;color:#2563eb;font-weight:800;font-size:12px;cursor:pointer;}
 
-.nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--borda);display:flex;justify-content:space-around;padding:8px 0 14px;z-index:200;box-shadow:0 -2px 16px rgba(37,99,235,0.06);}
-.nb{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-weight:800;padding:0 10px;color:var(--tx3);}
-.nb.on{color:var(--azul);}
-.nb span{font-size:20px;}
+/* NAV */
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:space-around;padding:8px 0 14px;z-index:200;}
+.nb{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-weight:800;padding:0 10px;color:#94a3b8;}
+.nb.on{color:#2563eb;}
+.nb-ico{font-size:20px;}
 
-.cx{padding:0 14px;}
-.card{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.03);}
-.card.on{border:1.5px solid var(--azul);background:var(--azul-s);}
+/* PÁGINAS */
+.pg{padding:0 14px;display:none;}
+.pg.on{display:block;}
 
-.hero{background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:20px;padding:20px;margin:14px 0 14px;color:#fff;position:relative;overflow:hidden;}
-.hero::before{content:'';position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(255,255,255,0.1);border-radius:50%;}
+/* CARDS */
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:10px;}
+.card.sel{border:1.5px solid #2563eb;background:#eff6ff;}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:20px;padding:20px;margin:14px 0;color:#fff;overflow:hidden;position:relative;}
+.hero::after{content:'';position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(255,255,255,0.1);border-radius:50%;}
 .hero-ola{font-size:12px;font-weight:700;opacity:.8;}
 .hero-nome{font-family:'Lora',serif;font-size:22px;font-weight:600;margin-bottom:12px;}
 .hero-stats{display:flex;gap:20px;}
 .hs-n{font-size:22px;font-weight:900;}
 .hs-l{font-size:10px;font-weight:700;opacity:.8;}
 
+/* GRADE */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
-.quad{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 1px 4px rgba(0,0,0,0.03);}
-.quad:active{transform:scale(.98);}
-.qi{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-.qt{font-size:12px;font-weight:800;}
-.qc{font-size:10px;color:var(--tx3);font-weight:700;}
-.qd{font-size:11px;color:var(--tx2);font-weight:700;margin:8px 0 4px;}
-.qi-txt{font-size:11px;color:var(--tx2);padding:2px 0;}
+.quad{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;cursor:pointer;transition:transform .15s;}
+.quad:active{transform:scale(.97);}
+.q-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.q-tit{font-size:12px;font-weight:800;}
+.q-cnt{font-size:10px;color:#94a3b8;font-weight:700;}
+.q-ult{font-size:11px;color:#475569;font-weight:700;margin:8px 0 4px;}
+.q-item{font-size:11px;color:#475569;padding:2px 0;}
 
-.doc-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:14px;margin-bottom:8px;animation:up .3s ease;}
-.dc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-.dc-titulo{font-weight:800;font-size:14px;}
-.dc-meta{font-size:11px;color:var(--tx3);font-weight:700;margin-top:2px;}
-.dc-vals{margin-top:10px;padding-top:10px;border-top:1px solid var(--borda);}
-.vr{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px;}
-.vr-n{color:var(--tx2);font-weight:700;}
+/* LISTA DOCS */
+.doc{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:8px;animation:up .3s ease;}
+.doc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.doc-tit{font-weight:800;font-size:14px;}
+.doc-meta{font-size:11px;color:#94a3b8;font-weight:700;margin-top:2px;}
+.doc-vals{margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;}
+.vr{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;}
+.vr-n{color:#475569;font-weight:700;}
 .vr-v{font-weight:800;}
 
-.chart-wrap{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:14px;margin-bottom:12px;}
-.chart-t{font-size:13px;font-weight:800;margin-bottom:8px;}
-.chart-sel{background:var(--bg);border:1.5px solid var(--borda);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;outline:none;margin-bottom:10px;width:100%;color:var(--tx);}
+/* GRÁFICO */
+.chart-box{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:12px;}
+.chart-tit{font-size:13px;font-weight:800;margin-bottom:8px;}
+.chart-sel{background:#f8faff;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;outline:none;margin-bottom:10px;width:100%;color:#1e293b;}
 
-.ftitle{font-family:'Lora',serif;font-size:20px;font-weight:600;margin:16px 0 18px;}
-.lbl{font-size:10px;color:var(--tx3);margin-bottom:4px;display:block;font-weight:800;letter-spacing:.6px;text-transform:uppercase;}
-.inp{width:100%;background:#f1f5fb;border:1.5px solid var(--borda);border-radius:12px;padding:12px 14px;color:var(--tx);font-size:14px;font-weight:600;outline:none;}
-.inp:focus{border-color:var(--azul);}
-.btn{background:var(--azul);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;width:100%;}
-.btn-o{background:#f1f5fb;color:var(--azul);border:1.5px dashed var(--borda);}
-.btn-del{background:none;border:none;color:#ef4444;font-size:16px;cursor:pointer;flex-shrink:0;}
+/* FORM */
+.ftit{font-family:'Lora',serif;font-size:20px;font-weight:600;margin:16px 0 18px;}
+.lbl{font-size:10px;color:#94a3b8;margin-bottom:4px;display:block;font-weight:800;letter-spacing:.6px;text-transform:uppercase;}
+.inp{width:100%;background:#f1f5fb;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;color:#1e293b;font-size:14px;font-weight:600;outline:none;}
+.inp:focus{border-color:#2563eb;}
+.btn{background:#2563eb;color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;width:100%;}
+.btn-o{background:#f1f5fb;color:#2563eb;border:1.5px dashed #e2e8f0;}
+.btn-del{background:none;border:none;color:#ef4444;font-size:16px;cursor:pointer;}
 .mb12{margin-bottom:12px;}
 .mb18{margin-bottom:18px;}
 .fr{display:flex;align-items:center;gap:10px;}
 .f1{flex:1;}
-.slbl{font-size:10px;font-weight:800;color:var(--tx3);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px;}
-.hide{display:none!important;}
-.pill{border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:3px;}
+.slbl{font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px;}
+.h{display:none!important;}
 
-.up-area{border:2px dashed var(--azul-m);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;background:var(--azul-s);}
-.up-icon{font-size:32px;margin-bottom:6px;}
-.up-t{font-size:13px;font-weight:800;color:var(--azul);}
-.up-s{font-size:11px;color:var(--tx3);font-weight:700;margin-top:3px;}
+/* UPLOAD */
+.up-box{border:2px dashed #bfdbfe;border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;background:#eff6ff;}
+.up-ico{font-size:32px;margin-bottom:6px;}
+.up-tit{font-size:13px;font-weight:800;color:#2563eb;}
+.up-sub{font-size:11px;color:#94a3b8;font-weight:700;margin-top:3px;}
 
-.ia-box{background:var(--azul-s);border:1.5px solid var(--azul-m);border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;}
-.ia-t{font-size:13px;font-weight:800;color:var(--azul);margin-top:8px;animation:pulse 1.2s infinite;}
+/* IA */
+.ia-box{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;}
+.ia-spin{width:26px;height:26px;border-radius:50%;border:2px solid #bfdbfe;border-top-color:#2563eb;animation:spin .8s linear infinite;margin:0 auto;}
+.ia-tit{font-size:13px;font-weight:800;color:#2563eb;margin-top:8px;animation:pulse 1.2s infinite;}
 
-.val-row{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
-.val-row input{flex:1;}
-.btn-add-v{background:var(--azul-s);border:none;border-radius:8px;padding:8px;color:var(--azul);font-size:12px;font-weight:800;cursor:pointer;width:100%;margin-top:4px;}
+/* VALORES */
+.vrow{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.vrow input{flex:1;}
+.btn-addv{background:#eff6ff;border:none;border-radius:8px;padding:8px;color:#2563eb;font-size:12px;font-weight:800;cursor:pointer;width:100%;margin-top:4px;}
 
-.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;}
+/* AVATAR */
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;}
 .cp{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px;}
 .cc{width:30px;height:30px;border-radius:50%;cursor:pointer;outline:3px solid transparent;outline-offset:2px;}
-.cc.on{outline-color:var(--azul);}
+.cc.on{outline-color:#2563eb;}
 
-.spinner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;}
-.sc{width:38px;height:38px;border-radius:50%;border:3px solid var(--azul-m);border-top-color:var(--azul);animation:spin .8s linear infinite;}
-.st{color:var(--tx3);font-size:13px;font-weight:700;}
+/* TOAST */
+
+/* ANÁLISES */
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:800;margin-top:6px;}
+.badge-ok{background:#dcfce7;color:#16a34a;}
+.badge-up{background:#fee2e2;color:#dc2626;}
+.badge-dn{background:#fef9c3;color:#ca8a04;}
+.badge-eq{background:#e0e7ff;color:#6366f1;}
+.ref-ok{color:#16a34a;font-weight:800;}
+.ref-hi{color:#dc2626;font-weight:800;}
+.ref-lo{color:#ca8a04;font-weight:800;}
+.comp-box{background:#f8faff;border-radius:10px;padding:10px;margin-top:8px;}
+.comp-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #f1f5fb;}
+.comp-row:last-child{border:none;}
+.comp-n{color:#475569;font-weight:700;flex:1;}
+.comp-v{font-weight:800;text-align:right;}
+.comp-arr{font-size:14px;margin-left:6px;}
+.anl-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:8px;}
+.anl-tit{font-size:13px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
 
 .toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:800;z-index:9999;white-space:nowrap;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.15);}
 </style>
 </head>
 <body>
 
-<div id="login">
-  <div class="l-logo">💙</div>
-  <div class="l-title">Saúde Pessoal</div>
-  <div class="l-sub">Dashboard completo com gráficos,<br/>comparativos e leitura de exames por IA<br/>— salvo no seu Google Drive</div>
+<!-- LOGIN -->
+<div id="pg-login">
+  <div class="l-ico">💙</div>
+  <div class="l-tit">Saúde Pessoal</div>
+  <div class="l-sub">Dashboard com gráficos, comparativos<br/>e leitura de exames por IA<br/>salvo no Google Drive</div>
   <button class="btn-g" onclick="login()">
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"/>
     Entrar com Google
   </button>
 </div>
 
-<div id="app">
+<!-- APP -->
+<div id="pg-app">
+  <!-- Header -->
   <div class="hdr">
     <div class="hdr-l">
-      <button class="btn-bk hide" id="bbk" onclick="voltar()">‹</button>
-      <div><div class="hdr-t" id="htit">💙 Saúde Pessoal</div><div class="hdr-s" id="hsub">☁️ Google Drive conectado</div></div>
+      <button class="btn-bk h" id="bbk" onclick="voltar()">‹</button>
+      <div>
+        <div class="hdr-tit" id="h-tit">💙 Saúde Pessoal</div>
+        <div class="hdr-sub" id="h-sub">☁️ Google Drive conectado</div>
+      </div>
     </div>
-    <button class="btn-sm hide" id="bsync" onclick="save()">↑ Sync</button>
+    <button class="btn-sm h" id="b-sync" onclick="salvar()">↑ Sync</button>
   </div>
 
-  <div class="cx">
-    <!-- HOME -->
-    <div id="t-home">
-      <div style="padding:14px 0 8px;"><div class="slbl">Perfis da família</div></div>
-      <div id="lista-p"></div>
-      <button class="btn" onclick="go('add-p')" style="margin-top:2px;">+ Adicionar Perfil</button>
-    </div>
-
-    <!-- DASH -->
-    <div id="t-dash" class="hide">
-      <div class="hero">
-        <div class="hero-ola">Olá,</div>
-        <div class="hero-nome" id="d-nome">—</div>
-        <div class="hero-stats">
-          <div><div class="hs-n" id="s-ex">0</div><div class="hs-l">Exames</div></div>
-          <div><div class="hs-n" id="s-bi">0</div><div class="hs-l">Bioimpedâncias</div></div>
-          <div><div class="hs-n" id="s-al">0</div><div class="hs-l">Total docs</div></div>
-        </div>
-      </div>
-      <div class="g2" id="quadros"></div>
-    </div>
-
-    <!-- CATEGORIA -->
-    <div id="t-cat" class="hide">
-      <div id="chart-area"></div>
-      <div class="slbl" id="cat-lbl" style="margin-top:4px;">Documentos</div>
-      <div id="lista-c"></div>
-      <button class="btn" onclick="go('add-d')" style="margin-top:4px;">+ Adicionar</button>
-    </div>
-
-    <!-- ADD DOC -->
-    <div id="t-add-d" class="hide">
-      <div class="ftitle">Novo Documento</div>
-      <div class="mb12"><label class="lbl">Categoria</label>
-        <select class="inp" id="d-cat">
-          <option value="ex">🧪 Exame de Sangue</option>
-          <option value="bi">⚖️ Bioimpedância</option>
-          <option value="at">📋 Atestado</option>
-          <option value="re">💊 Receita Médica</option>
-          <option value="ou">📎 Outro</option>
-        </select>
-      </div>
-      <div class="mb12"><label class="lbl">Data</label><input class="inp" id="d-dt" type="date"/></div>
-      <div class="mb12"><label class="lbl">Observações</label><textarea class="inp" id="d-ob" style="min-height:65px;resize:vertical;" placeholder="Médico, clínica…"></textarea></div>
-
-      <div class="mb12">
-        <label class="lbl">Upload (IA extrai os valores)</label>
-        <input type="file" id="d-arq" accept=".pdf,image/*" style="display:none;" onchange="handleFile(this)"/>
-        <div class="up-area" onclick="document.getElementById('d-arq').click()">
-          <div class="up-icon">📄</div>
-          <div class="up-t" id="up-txt">Toque para selecionar</div>
-          <div class="up-s">PDF ou imagem — IA extrai automaticamente</div>
-        </div>
-      </div>
-
-      <div class="ia-box hide" id="ia-box">
-        <div class="sc" style="margin:0 auto;width:26px;height:26px;border-width:2px;"></div>
-        <div class="ia-t">🤖 Lendo documento com IA…</div>
-      </div>
-
-      <div id="area-vals" class="mb12">
-        <label class="lbl">Valores</label>
-        <div id="vals-form"></div>
-        <button class="btn-add-v" onclick="addValRow()">+ Adicionar valor</button>
-      </div>
-
-      <div class="mb18"><label class="lbl">Arquivo</label><div id="arq-prev" style="font-size:12px;color:var(--azul);font-weight:700;min-height:16px;"></div></div>
-      <button class="btn" onclick="saveDoc()">Salvar documento</button>
-    </div>
-
-    <!-- ADD PERFIL -->
-    <div id="t-add-p" class="hide">
-      <div class="ftitle">Novo Perfil</div>
-      <div class="mb12"><label class="lbl">Nome *</label><input class="inp" id="p-nome" placeholder="Ex: Renata" oninput="prevAv()"/></div>
-      <div class="mb12"><label class="lbl">Nascimento</label><input class="inp" id="p-nasc" type="date"/></div>
-      <div class="mb12"><label class="lbl">Sexo</label>
-        <select class="inp" id="p-sx">
-          <option value="">Preferir não dizer</option>
-          <option value="Feminino">Feminino</option>
-          <option value="Masculino">Masculino</option>
-          <option value="Outro">Outro</option>
-        </select>
-      </div>
-      <div class="mb18"><label class="lbl">Cor</label><div class="cp" id="cp"></div><div id="av-prev"></div></div>
-      <button class="btn" onclick="saveP()">Criar perfil</button>
-    </div>
+  <!-- HOME: Perfis -->
+  <div class="pg on" id="pg-home">
+    <div style="padding:14px 0 8px;"><div class="slbl">Perfis da família</div></div>
+    <div id="lista-perfis"></div>
+    <button class="btn" onclick="ir('add-p')">+ Adicionar Perfil</button>
   </div>
 
+  <!-- DASH -->
+  <div class="pg" id="pg-dash">
+    <div class="hero">
+      <div class="hero-ola">Olá,</div>
+      <div class="hero-nome" id="d-nome">—</div>
+      <div class="hero-stats">
+        <div><div class="hs-n" id="s-ex">0</div><div class="hs-l">Exames</div></div>
+        <div><div class="hs-n" id="s-bi">0</div><div class="hs-l">Bioimpedâncias</div></div>
+        <div><div class="hs-n" id="s-tot">0</div><div class="hs-l">Total</div></div>
+      </div>
+    </div>
+    <div class="g2" id="quadros"></div>
+  </div>
+
+  <!-- CATEGORIA -->
+  <div class="pg" id="pg-cat">
+    <div id="chart-area"></div>
+    <div id="anl-container"></div>
+    <div class="slbl" id="cat-lbl" style="margin-top:8px;"></div>
+    <div id="lista-docs"></div>
+    <button class="btn" onclick="ir('add-d')" style="margin-top:4px;">+ Adicionar</button>
+  </div>
+
+  <!-- ADD DOC -->
+  <div class="pg" id="pg-add-d">
+    <div class="ftit">Novo Documento</div>
+    <div class="mb12">
+      <label class="lbl">Categoria</label>
+      <select class="inp" id="d-cat">
+        <option value="ex">🧪 Exame de Sangue</option>
+        <option value="bi">⚖️ Bioimpedância</option>
+        <option value="at">📋 Atestado</option>
+        <option value="re">💊 Receita Médica</option>
+        <option value="ou">📎 Outro</option>
+      </select>
+    </div>
+    <div class="mb12"><label class="lbl">Data</label><input class="inp" id="d-dt" type="date"/></div>
+    <div class="mb12"><label class="lbl">Observações</label><textarea class="inp" id="d-ob" style="min-height:65px;resize:vertical;" placeholder="Médico, clínica…"></textarea></div>
+    <div class="mb12">
+      <label class="lbl">Upload (IA extrai os valores)</label>
+      <input type="file" id="d-arq" accept=".pdf,image/*" style="display:none;" onchange="handleArq(this)"/>
+      <div class="up-box" onclick="document.getElementById('d-arq').click()">
+        <div class="up-ico">📄</div>
+        <div class="up-tit" id="up-txt">Toque para selecionar</div>
+        <div class="up-sub">PDF ou imagem — IA extrai automaticamente</div>
+      </div>
+    </div>
+    <div class="ia-box h" id="ia-load">
+      <div class="ia-spin"></div>
+      <div class="ia-tit">🤖 Lendo documento com IA…</div>
+    </div>
+    <div id="area-vals" class="mb12">
+      <label class="lbl">Valores</label>
+      <div id="vals-form"></div>
+      <button class="btn-addv" onclick="addVRow()">+ Adicionar valor manualmente</button>
+    </div>
+    <div class="mb18"><label class="lbl">Arquivo</label><div id="arq-prev" style="font-size:12px;color:#2563eb;font-weight:700;"></div></div>
+    <button class="btn" onclick="saveDoc()">Salvar documento</button>
+  </div>
+
+  <!-- ADD PERFIL -->
+  <div class="pg" id="pg-add-p">
+    <div class="ftit">Novo Perfil</div>
+    <div class="mb12"><label class="lbl">Nome *</label><input class="inp" id="p-nome" placeholder="Ex: Renata" oninput="prevAv()"/></div>
+    <div class="mb12"><label class="lbl">Nascimento</label><input class="inp" id="p-nasc" type="date"/></div>
+    <div class="mb12"><label class="lbl">Sexo</label>
+      <select class="inp" id="p-sx">
+        <option value="">Preferir não dizer</option>
+        <option value="Feminino">Feminino</option>
+        <option value="Masculino">Masculino</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </div>
+    <div class="mb18">
+      <label class="lbl">Cor do avatar</label>
+      <div class="cp" id="cp"></div>
+      <div id="av-prev"></div>
+    </div>
+    <button class="btn" onclick="saveP()">Criar perfil</button>
+  </div>
+
+  <!-- NAV -->
   <nav class="nav">
-    <button class="nb" id="nb-h" onclick="go('home')"><span>🏠</span>Perfis</button>
-    <button class="nb hide" id="nb-d" onclick="go('dash')"><span>📊</span>Dashboard</button>
-    <button class="nb hide" id="nb-n" onclick="go('add-d')"><span>➕</span>Novo</button>
-    <button class="nb" onclick="save()"><span>☁️</span>Drive</button>
+    <button class="nb on" id="nb-home" onclick="ir('home')"><span class="nb-ico">🏠</span>Perfis</button>
+    <button class="nb h" id="nb-dash" onclick="ir('dash')"><span class="nb-ico">📊</span>Dashboard</button>
+    <button class="nb h" id="nb-novo" onclick="ir('add-d')"><span class="nb-ico">➕</span>Novo</button>
+    <button class="nb" onclick="salvar()"><span class="nb-ico">☁️</span>Drive</button>
   </nav>
 </div>
 
 <div class="toast" id="tst"></div>
 
 <script>
-const CID="872104274431-4k5603k842orhjkktu1h0db0bk6n55og.apps.googleusercontent.com";
-const SCOPE="https://www.googleapis.com/auth/drive.appdata";
-const FNAME="hisaude_v3.json";
-const CORES=["#ef4444","#f97316","#eab308","#22c55e","#0ea5e9","#6366f1","#ec4899","#14b8a6"];
-const CATS={
+// ── Config ────────────────────────────────────────────────────────────────────
+const CID = "872104274431-4k5603k842orhjkktu1h0db0bk6n55og.apps.googleusercontent.com";
+const SCOPE = "https://www.googleapis.com/auth/drive.appdata";
+const FNAME = "hisaude_v4.json";
+const CORES = ["#ef4444","#f97316","#eab308","#22c55e","#0ea5e9","#6366f1","#ec4899","#14b8a6"];
+const CATS = {
   ex:{l:"Exames de Sangue",i:"🧪",c:"#2563eb",b:"#eff6ff"},
   bi:{l:"Bioimpedância",   i:"⚖️",c:"#7c3aed",b:"#f5f3ff"},
   at:{l:"Atestados",       i:"📋",c:"#ea580c",b:"#fff7ed"},
@@ -241,275 +529,442 @@ const CATS={
   ou:{l:"Outros",          i:"📎",c:"#64748b",b:"#f8faff"},
 };
 
-let D={perfis:[],docs:[]}, P=null, tela="home", cat="ex";
-let tok=null, fid=null, corSel=0;
-let arq={data:null,nome:null}, vals=[], ch=null;
+// ── Estado ────────────────────────────────────────────────────────────────────
+let D = {perfis:[],docs:[]};
+let P = null, telaAtual = "home", catAtual = "ex";
+let tok = null, fid = null, corSel = 0;
+let arq = {data:null,nome:null}, vals = [], ch = null;
 
-// LOGIN
-function login(){
-  google.accounts.oauth2.initTokenClient({client_id:CID,scope:SCOPE,callback:async t=>{
-    if(t.access_token){
-      tok=t.access_token;
-      document.getElementById('login').style.display='none';
-      document.getElementById('app').style.display='block';
-      go('home');
-      showSpin();
-      await load();
-      hideSpin();
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const ini = n => n.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+const fmt = iso => iso ? new Date(iso).toLocaleDateString("pt-BR") : "";
+const $ = id => document.getElementById(id);
+
+function toast(msg, cor="#6366f1", ms=3000) {
+  const t = $('tst'); t.textContent=msg; t.style.background=cor; t.style.display='block';
+  setTimeout(()=>t.style.display='none', ms);
+}
+function sub(txt) { $('h-sub').textContent = txt; }
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+function login() {
+  google.accounts.oauth2.initTokenClient({
+    client_id: CID, scope: SCOPE,
+    callback: async tr => {
+      if (!tr.access_token) return;
+      tok = tr.access_token;
+      $('pg-login').style.display = 'none';
+      $('pg-app').style.display = 'block';
+      sub("⟳ Carregando dados…");
+      await carregar();
+      sub("☁️ Google Drive conectado");
+      renderHome();
     }
-  }}).requestAccessToken({prompt:'select_account'});
+  }).requestAccessToken({prompt:'select_account'});
 }
 
-// DRIVE
-async function buscarFid(){
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FNAME}'&fields=files(id)`,{headers:{Authorization:`Bearer ${tok}`}});
-  const j=await r.json(); return j.files?.length?j.files[0].id:null;
+// ── Drive ─────────────────────────────────────────────────────────────────────
+async function buscarFid() {
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FNAME}'&fields=files(id)`,
+    {headers:{Authorization:`Bearer ${tok}`}});
+  const j = await r.json();
+  return j.files?.length ? j.files[0].id : null;
 }
-async function load(){
-  try{
-    fid=await buscarFid();
-    if(!fid){toast("Bem-vindo! Crie seu primeiro perfil 👋","#6366f1",4000);return;}
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{headers:{Authorization:`Bearer ${tok}`}});
-    D=await r.json(); if(D.perfis?.length)P=D.perfis[0];
+
+async function carregar() {
+  try {
+    fid = await buscarFid();
+    if (!fid) { toast("Bem-vindo! Crie seu primeiro perfil 👋","#6366f1",4000); return; }
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,
+      {headers:{Authorization:`Bearer ${tok}`}});
+    D = await r.json();
+    if (D.perfis?.length) P = D.perfis[0];
     toast("Dados carregados ✓","#16a34a");
-  }catch{toast("Erro ao carregar","#ef4444");}
+  } catch(e) { toast("Erro ao carregar dados","#ef4444"); }
 }
-async function save(){
+
+async function salvar() {
   sub("⟳ Salvando…");
-  try{
-    const blob=new Blob([JSON.stringify(D)],{type:"application/json"});
-    const meta={name:FNAME,...(fid?{}:{parents:["appDataFolder"]})};
-    const form=new FormData();
-    form.append("metadata",new Blob([JSON.stringify(meta)],{type:"application/json"}));
-    form.append("file",blob);
-    const r=await fetch(fid?`https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=multipart`:`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`,
-      {method:fid?"PATCH":"POST",headers:{Authorization:`Bearer ${tok}`},body:form});
-    const j=await r.json(); if(j.id)fid=j.id;
+  try {
+    const blob = new Blob([JSON.stringify(D)], {type:"application/json"});
+    const meta = {name:FNAME, ...(fid?{}:{parents:["appDataFolder"]})};
+    const form = new FormData();
+    form.append("metadata", new Blob([JSON.stringify(meta)],{type:"application/json"}));
+    form.append("file", blob);
+    const url = fid
+      ? `https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=multipart`
+      : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+    const r = await fetch(url, {method:fid?"PATCH":"POST", headers:{Authorization:`Bearer ${tok}`}, body:form});
+    const j = await r.json();
+    if (j.id) fid = j.id;
     toast("Salvo no Drive ✓","#16a34a");
-  }catch{toast("Erro ao salvar","#ef4444");}
+  } catch(e) { toast("Erro ao salvar","#ef4444"); }
   sub("☁️ Google Drive conectado");
 }
 
-// IA
-async function lerIA(b64,tipo){
-  const px=tipo==='bi'
-    ?`Bioimpedância: extraia TODOS os valores (peso, IMC, massa gorda%, massa gorda kg, massa magra, água, metabolismo basal). JSON: {"valores":[{"nome":"...","valor":"...","unidade":"..."},...]}`
-    :tipo==='ex'
-    ?`Exame de sangue: extraia TODOS os valores (hemoglobina, colesterol, LDL, HDL, triglicerídeos, glicose, etc) com referências se disponíveis. JSON: {"valores":[{"nome":"...","valor":"...","unidade":"...","ref":"..."},...]}`
-    :`Documento médico: extraia as principais informações. JSON: {"valores":[{"nome":"...","valor":"...","unidade":"..."},...]}`; 
-  const r=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:[
-      {type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64.split(',')[1]}},
-      {type:"text",text:px}
-    ]}]})
+// ── IA ────────────────────────────────────────────────────────────────────────
+async function lerIA(b64, tipo) {
+  const px = tipo==='bi'
+    ? `Bioimpedância: extraia TODOS os valores (peso, IMC, massa gorda%, massa gorda kg, massa magra, água, metabolismo basal). Retorne SOMENTE JSON: {"valores":[{"nome":"Peso","valor":"68.5","unidade":"kg"}]}`
+    : tipo==='ex'
+    ? `Exame de sangue: extraia TODOS os valores (hemoglobina, colesterol, LDL, HDL, triglicerídeos, glicose, etc). Retorne SOMENTE JSON: {"valores":[{"nome":"Colesterol","valor":"190","unidade":"mg/dL"}]}`
+    : `Extraia as informações principais. Retorne SOMENTE JSON: {"valores":[{"nome":"...","valor":"...","unidade":"..."}]}`;
+
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      model:"claude-sonnet-4-20250514", max_tokens:2000,
+      messages:[{role:"user", content:[
+        {type:"image", source:{type:"base64", media_type:"image/jpeg", data:b64.split(',')[1]}},
+        {type:"text", text:px}
+      ]}]
+    })
   });
-  const j=await r.json();
-  const txt=j.content?.[0]?.text||"";
-  const m=txt.match(/\{[\s\S]*\}/);
-  if(m){const p=JSON.parse(m[0]);return p.valores||[];}
+  const j = await r.json();
+  const txt = j.content?.[0]?.text || "";
+  const m = txt.match(/\{[\s\S]*\}/);
+  if (m) { const p = JSON.parse(m[0]); return p.valores||[]; }
   return [];
 }
 
-async function handleFile(inp){
-  const f=inp.files[0];if(!f)return;
-  document.getElementById('up-txt').textContent="📎 "+f.name;
-  document.getElementById('arq-prev').textContent="📎 "+f.name;
-  const reader=new FileReader();
-  reader.onload=async e=>{
-    arq={data:e.target.result,nome:f.name};
-    if(f.type.startsWith('image/')||f.type==='application/pdf'){
-      document.getElementById('ia-box').classList.remove('hide');
-      document.getElementById('area-vals').classList.add('hide');
-      try{
-        const tipo=document.getElementById('d-cat').value;
-        vals=await lerIA(e.target.result,tipo);
+async function handleArq(inp) {
+  const f = inp.files[0]; if (!f) return;
+  $('up-txt').textContent = "📎 " + f.name;
+  $('arq-prev').textContent = "📎 " + f.name;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    arq = {data:e.target.result, nome:f.name};
+    if (f.type.startsWith('image/') || f.type==='application/pdf') {
+      $('ia-load').classList.remove('h');
+      $('area-vals').classList.add('h');
+      try {
+        vals = await lerIA(e.target.result, $('d-cat').value);
         renderVals(vals);
-        toast(`✅ ${vals.length} valores identificados!`,"#16a34a");
-      }catch{vals=[];renderVals([]);toast("Adicione os valores manualmente","#f59e0b");}
-      document.getElementById('ia-box').classList.add('hide');
-      document.getElementById('area-vals').classList.remove('hide');
+        toast(`✅ ${vals.length} valores identificados!`, "#16a34a");
+      } catch {
+        vals = []; renderVals([]);
+        toast("Adicione os valores manualmente","#f59e0b");
+      }
+      $('ia-load').classList.add('h');
+      $('area-vals').classList.remove('h');
     }
   };
   reader.readAsDataURL(f);
 }
 
-function renderVals(vs){
-  document.getElementById('vals-form').innerHTML=vs.map((v,i)=>`
-    <div class="val-row">
-      <input class="inp" placeholder="Nome" value="${v.nome||''}" id="vn${i}" style="flex:2;"/>
-      <input class="inp" placeholder="Valor" value="${v.valor||''}" id="vv${i}" style="flex:1;"/>
-      <input class="inp" placeholder="Unid." value="${v.unidade||''}" id="vu${i}" style="flex:1;"/>
-      <button onclick="delVal(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;flex-shrink:0;">✕</button>
+// ── Valores form ──────────────────────────────────────────────────────────────
+function renderVals(vs) {
+  $('vals-form').innerHTML = vs.map((v,i) => `
+    <div class="vrow">
+      <input class="inp" placeholder="Nome" value="${v.nome||''}" id="vn${i}" style="flex:2;font-size:13px;padding:9px 10px;"/>
+      <input class="inp" placeholder="Valor" value="${v.valor||''}" id="vv${i}" style="flex:1;font-size:13px;padding:9px 10px;"/>
+      <input class="inp" placeholder="Unid." value="${v.unidade||''}" id="vu${i}" style="flex:1;font-size:13px;padding:9px 10px;"/>
+      <button onclick="delV(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;flex-shrink:0;">✕</button>
     </div>`).join('');
 }
-function addValRow(){vals.push({nome:'',valor:'',unidade:''});renderVals(vals);}
-function delVal(i){vals.splice(i,1);renderVals(vals);}
-function getVals(){
-  const vs=[];
-  document.querySelectorAll('.val-row').forEach((r,i)=>{
-    const n=document.getElementById('vn'+i)?.value?.trim();
-    const v=document.getElementById('vv'+i)?.value?.trim();
-    const u=document.getElementById('vu'+i)?.value?.trim();
-    if(n||v)vs.push({nome:n,valor:v,unidade:u});
+function addVRow() { vals.push({nome:'',valor:'',unidade:''}); renderVals(vals); }
+function delV(i) { vals.splice(i,1); renderVals(vals); }
+function getVals() {
+  const vs = [];
+  document.querySelectorAll('.vrow').forEach((_,i) => {
+    const n=$('vn'+i)?.value?.trim(), v=$('vv'+i)?.value?.trim(), u=$('vu'+i)?.value?.trim();
+    if (n||v) vs.push({nome:n,valor:v,unidade:u});
   });
   return vs;
 }
 
-// CRUD
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
-const ini=n=>n.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-const fmt=iso=>iso?new Date(iso).toLocaleDateString("pt-BR"):"";
-
-function saveP(){
-  const nome=document.getElementById('p-nome').value.trim();
-  if(!nome){toast("Digite o nome!","#ef4444");return;}
-  const p={id:uid(),nome,nasc:document.getElementById('p-nasc').value,sx:document.getElementById('p-sx').value,c:corSel};
-  D.perfis.push(p);if(!P)P=p;
-  save();document.getElementById('p-nome').value='';go('home');
+// ── CRUD ──────────────────────────────────────────────────────────────────────
+function saveP() {
+  const nome = $('p-nome').value.trim();
+  if (!nome) { toast("Digite o nome!","#ef4444"); return; }
+  const p = {id:uid(), nome, nasc:$('p-nasc').value, sx:$('p-sx').value, c:corSel};
+  D.perfis.push(p); if (!P) P = p;
+  salvar(); $('p-nome').value=''; ir('home');
 }
-function delP(id){
-  if(!confirm("Remover este perfil e todos os documentos?"))return;
-  D.perfis=D.perfis.filter(p=>p.id!==id);D.docs=D.docs.filter(d=>d.pid!==id);
-  if(P?.id===id)P=D.perfis[0]||null;save();go('home');
+function delP(id) {
+  if (!confirm("Remover este perfil e todos os documentos?")) return;
+  D.perfis=D.perfis.filter(p=>p.id!==id); D.docs=D.docs.filter(d=>d.pid!==id);
+  if (P?.id===id) P=D.perfis[0]||null;
+  salvar(); ir('home');
 }
-function saveDoc(){
-  if(!P){toast("Selecione um perfil!","#ef4444");return;}
-  const doc={id:uid(),pid:P.id,cat:document.getElementById('d-cat').value,dt:document.getElementById('d-dt').value,ob:document.getElementById('d-ob').value,vals:getVals(),fd:arq.data,fn:arq.nome,ts:new Date().toISOString()};
-  D.docs.push(doc);save();
-  arq={data:null,nome:null};vals=[];
-  ['d-ob','d-dt'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('vals-form').innerHTML='';
-  document.getElementById('up-txt').textContent='Toque para selecionar';
-  document.getElementById('arq-prev').textContent='';
-  go('dash');
+function saveDoc() {
+  if (!P) { toast("Selecione um perfil!","#ef4444"); return; }
+  const doc = {id:uid(), pid:P.id, cat:$('d-cat').value, dt:$('d-dt').value, ob:$('d-ob').value, vals:getVals(), fd:arq.data, fn:arq.nome, ts:new Date().toISOString()};
+  D.docs.push(doc); salvar();
+  arq={data:null,nome:null}; vals=[];
+  $('d-ob').value=''; $('d-dt').value=''; $('d-arq').value='';
+  $('vals-form').innerHTML=''; $('up-txt').textContent='Toque para selecionar'; $('arq-prev').textContent='';
+  ir('dash');
 }
-function delDoc(id){
-  if(!confirm("Remover?"))return;
-  D.docs=D.docs.filter(d=>d.id!==id);save();renderCat();
+function delDoc(id) {
+  if (!confirm("Remover?")) return;
+  D.docs=D.docs.filter(d=>d.id!==id); salvar(); renderCat();
 }
 
-// RENDER
-function renderHome(){
-  const el=document.getElementById('lista-p');
-  if(!D.perfis.length){el.innerHTML=`<div class="card" style="text-align:center;color:var(--tx3);padding:28px;font-size:13px;">Nenhum perfil ainda. Adicione o primeiro! 👇</div>`;return;}
-  el.innerHTML=D.perfis.map(p=>{
-    const bg=CORES[p.c%CORES.length];const n=D.docs.filter(d=>d.pid===p.id).length;const on=P?.id===p.id;
-    return `<div class="card fr ${on?'on':''}" onclick="selP('${p.id}')" style="cursor:pointer;margin-bottom:8px;">
-      <div class="avatar" style="width:46px;height:46px;background:${bg};font-size:16px;box-shadow:0 2px 10px ${bg}55;">${ini(p.nome)}</div>
-      <div class="f1"><div style="font-weight:800;font-size:15px;">${p.nome}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;">${p.nasc?fmt(p.nasc):''}${p.sx?' • '+p.sx:''}</div></div>
-      <div style="text-align:right;"><span style="background:var(--azul-s);color:var(--azul);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:800;">${n} docs</span><div style="font-size:20px;color:var(--tx3);">›</div></div>
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderHome() {
+  const el = $('lista-perfis');
+  if (!D.perfis.length) {
+    el.innerHTML=`<div class="card" style="text-align:center;color:#94a3b8;padding:28px;font-size:13px;">Nenhum perfil ainda. Adicione o primeiro! 👇</div>`;
+    return;
+  }
+  el.innerHTML = D.perfis.map(p => {
+    const bg=CORES[p.c%CORES.length], n=D.docs.filter(d=>d.pid===p.id).length, on=P?.id===p.id;
+    return `<div class="card fr ${on?'sel':''}" onclick="selP('${p.id}')" style="cursor:pointer;margin-bottom:8px;">
+      <div class="av" style="width:46px;height:46px;background:${bg};font-size:16px;">${ini(p.nome)}</div>
+      <div class="f1">
+        <div style="font-weight:800;font-size:15px;">${p.nome}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${p.nasc?fmt(p.nasc):''}${p.sx?' • '+p.sx:''}</div>
+      </div>
+      <div style="text-align:right;">
+        <span style="background:#eff6ff;color:#2563eb;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:800;">${n} docs</span>
+        <div style="font-size:20px;color:#94a3b8;">›</div>
+      </div>
     </div>`;
   }).join('');
 }
-function selP(id){P=D.perfis.find(p=>p.id===id);go('dash');}
+function selP(id) { P=D.perfis.find(p=>p.id===id); ir('dash'); }
 
-function renderDash(){
-  if(!P)return;
-  document.getElementById('d-nome').textContent=P.nome+'!';
-  const docs=D.docs.filter(d=>d.pid===P.id);
-  document.getElementById('s-ex').textContent=docs.filter(d=>d.cat==='ex').length;
-  document.getElementById('s-bi').textContent=docs.filter(d=>d.cat==='bi').length;
-  document.getElementById('s-al').textContent=docs.length;
-  document.getElementById('quadros').innerHTML=Object.entries(CATS).map(([id,c])=>{
-    const ds=docs.filter(d=>d.cat===id).sort((a,b)=>new Date(b.dt)-new Date(a.dt));
-    const u=ds[0];
-    return `<div class="quad" onclick="openCat('${id}')">
+function renderDash() {
+  if (!P) return;
+  $('d-nome').textContent = P.nome+'!';
+  const docs = D.docs.filter(d=>d.pid===P.id);
+  $('s-ex').textContent = docs.filter(d=>d.cat==='ex').length;
+  $('s-bi').textContent = docs.filter(d=>d.cat==='bi').length;
+  $('s-tot').textContent = docs.length;
+  $('quadros').innerHTML = Object.entries(CATS).map(([id,c]) => {
+    const ds=docs.filter(d=>d.cat===id).sort((a,b)=>new Date(b.dt)-new Date(a.dt)), u=ds[0];
+    return `<div class="quad" onclick="abrirCat('${id}')">
       <div class="fr" style="gap:8px;margin-bottom:8px;">
-        <div class="qi" style="background:${c.b};color:${c.c};">${c.i}</div>
-        <div><div class="qt">${c.l}</div><div class="qc">${ds.length} registro${ds.length!==1?'s':''}</div></div>
+        <div class="q-ico" style="background:${c.b};color:${c.c};">${c.i}</div>
+        <div><div class="q-tit">${c.l}</div><div class="q-cnt">${ds.length} registro${ds.length!==1?'s':''}</div></div>
       </div>
-      ${u?`<div class="qd">Último: ${fmt(u.dt)}</div>${(u.vals?.slice(0,2)||[]).map(v=>`<div class="qi-txt">• ${v.nome}: <b>${v.valor}${v.unidade?' '+v.unidade:''}</b></div>`).join('')}`:`<div class="qi-txt" style="color:var(--tx3);">Nenhum registro ainda</div>`}
+      ${u?`<div class="q-ult">Último: ${fmt(u.dt)}</div>
+        ${(u.vals?.slice(0,2)||[]).map(v=>{
+          const st=statusValor(v.nome,v.valor);
+          const cl=st==='ok'?'#16a34a':st==='hi'?'#dc2626':st==='lo'?'#ca8a04':'#475569';
+          return `<div class="q-item"><span style="color:${cl};">●</span> ${v.nome}: <b>${v.valor}${v.unidade?' '+v.unidade:''}</b></div>`;
+        }).join('')}
+        ${(()=>{const prob=(u.vals||[]).filter(v=>statusValor(v.nome,v.valor)==='hi'||statusValor(v.nome,v.valor)==='lo').length;
+          return prob>0?`<span class="badge badge-up" style="font-size:10px;padding:3px 8px;">⚠️ ${prob} atenção</span>`:(u.vals?.some(v=>statusValor(v.nome,v.valor)==='ok')?`<span class="badge badge-ok" style="font-size:10px;padding:3px 8px;">✅ Normal</span>`:'')})()} `
+      :`<div class="q-item" style="color:#94a3b8;">Nenhum registro</div>`}
     </div>`;
   }).join('');
 }
-function openCat(id){cat=id;go('cat');}
+function abrirCat(id) { catAtual=id; ir('cat'); }
 
-function renderCat(){
-  const c=CATS[cat];document.getElementById('cat-lbl').textContent=c.l;
-  const docs=D.docs.filter(d=>d.pid===P?.id&&d.cat===cat).sort((a,b)=>new Date(a.dt)-new Date(b.dt));
-  const area=document.getElementById('chart-area');
-  if(ch){ch.destroy();ch=null;}
+function renderCat() {
+  const c=CATS[catAtual];
+  $('cat-lbl').textContent = c.l;
+  const docs=D.docs.filter(d=>d.pid===P?.id&&d.cat===catAtual).sort((a,b)=>new Date(a.dt)-new Date(b.dt));
+  const area=$('chart-area');
+  if (ch) { ch.destroy(); ch=null; }
 
-  if(docs.length>1){
-    const nomes=new Set();docs.forEach(d=>d.vals?.forEach(v=>v.nome&&nomes.add(v.nome)));
-    const ns=[...nomes].slice(0,8);
-    if(ns.length){
-      area.innerHTML=`<div class="chart-wrap"><div class="chart-t">📈 Evolução — ${c.l}</div>${ns.length>1?`<select class="chart-sel" id="csel" onchange="updChart()">${ns.map(n=>`<option>${n}</option>`).join('')}</select>`:''}<canvas id="myChart"></canvas></div>`;
-      drawChart(docs,ns[0]);window._nd=docs;window._nn=ns;
-    }else area.innerHTML='';
-  }else area.innerHTML='';
+  if (docs.length>1) {
+    const ns=[...new Set(docs.flatMap(d=>d.vals?.map(v=>v.nome)||[]))].filter(Boolean).slice(0,8);
+    if (ns.length) {
+      area.innerHTML=`<div class="chart-box"><div class="chart-tit">📈 Evolução — ${c.l}</div>${ns.length>1?`<select class="chart-sel" id="csel" onchange="updCh()">${ns.map(n=>`<option>${n}</option>`).join('')}</select>`:''}<canvas id="meuChart"></canvas></div>`;
+      drawCh(docs, ns[0]); window._dn=docs; window._nn=ns;
+    } else area.innerHTML='';
+  } else area.innerHTML='';
 
-  const lista=document.getElementById('lista-c');
-  if(!docs.length){lista.innerHTML=`<div class="card" style="text-align:center;color:var(--tx3);padding:24px;font-size:13px;">Nenhum documento ainda.</div>`;return;}
+  // Análise
+  $('lista-docs').insertAdjacentHTML && null; // placeholder
+  const anlHtml = renderAnalise(catAtual);
+  const lista=$('lista-docs');
+  // Inject analysis before list
+  const anlContainer = document.getElementById('anl-container');
+  if (anlContainer) anlContainer.innerHTML = anlHtml;
+  if (!docs.length) { lista.innerHTML=`<div class="card" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px;">Nenhum documento ainda.</div>`; return; }
   lista.innerHTML=[...docs].reverse().map(doc=>`
-    <div class="doc-card">
-      <div class="dc-top">
-        <div class="f1"><div class="dc-titulo">${c.i} ${fmt(doc.dt)||'Sem data'}</div>${doc.ob?`<div class="dc-meta">${doc.ob}</div>`:''}</div>
-        <div class="fr" style="gap:8px;">${doc.fn?`<a href="${doc.fd}" download="${doc.fn}" style="font-size:18px;text-decoration:none;">📎</a>`:''}<button class="btn-del" onclick="delDoc('${doc.id}')">🗑</button></div>
+    <div class="doc">
+      <div class="doc-top">
+        <div class="f1">
+          <div class="doc-tit">${c.i} ${fmt(doc.dt)||'Sem data'}</div>
+          ${doc.ob?`<div class="doc-meta">${doc.ob}</div>`:''}
+        </div>
+        <div class="fr" style="gap:8px;">
+          ${doc.fn?`<a href="${doc.fd}" download="${doc.fn}" style="font-size:18px;text-decoration:none;">📎</a>`:''}
+          <button class="btn-del" onclick="delDoc('${doc.id}')">🗑</button>
+        </div>
       </div>
-      ${doc.vals?.length?`<div class="dc-vals">${doc.vals.map(v=>`<div class="vr"><span class="vr-n">${v.nome}</span><span class="vr-v">${v.valor}${v.unidade?' '+v.unidade:''}</span></div>`).join('')}</div>`:''}</div>`).join('');
+      ${doc.vals?.length?`<div class="doc-vals">${doc.vals.map(v=>`<div class="vr"><span class="vr-n">${v.nome}</span><span class="vr-v">${v.valor}${v.unidade?' '+v.unidade:''}</span></div>`).join('')}</div>`:''}</div>`).join('');
 }
 
-function drawChart(docs,ind){
-  const ctx=document.getElementById('myChart');if(!ctx)return;
+function drawCh(docs, ind) {
+  const ctx=$('meuChart'); if(!ctx)return;
   if(ch)ch.destroy();
-  const c=CATS[cat];const labels=[],vals=[];
-  docs.forEach(d=>{const v=d.vals?.find(v=>v.nome===ind);if(v&&!isNaN(parseFloat(v.valor))){labels.push(fmt(d.dt));vals.push(parseFloat(v.valor));}});
-  ch=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:ind,data:vals,borderColor:c.c,backgroundColor:c.c+'22',borderWidth:2.5,pointBackgroundColor:c.c,pointRadius:5,tension:.4,fill:true}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f1f5fb'},ticks:{font:{size:11,weight:'700'}}},x:{grid:{display:false},ticks:{font:{size:10,weight:'700'}}}}}});
+  const c=CATS[catAtual], labels=[], data=[];
+  docs.forEach(d=>{const v=d.vals?.find(v=>v.nome===ind);if(v&&!isNaN(parseFloat(v.valor))){labels.push(fmt(d.dt));data.push(parseFloat(v.valor));}});
+  ch=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:ind,data,borderColor:c.c,backgroundColor:c.c+'22',borderWidth:2.5,pointBackgroundColor:c.c,pointRadius:5,tension:.4,fill:true}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#f1f5fb'},ticks:{font:{size:11,weight:'700'}}},x:{grid:{display:false},ticks:{font:{size:10,weight:'700'}}}}}});
 }
-function updChart(){const s=document.getElementById('csel')?.value;if(s)drawChart(window._nd,s);}
+function updCh(){const s=$('csel')?.value;if(s)drawCh(window._dn,s);}
 
-// NAV
-function go(t){
-  ['home','dash','cat','add-d','add-p'].forEach(x=>document.getElementById('t-'+x).classList.add('hide'));
-  document.getElementById('t-'+t).classList.remove('hide');
-  tela=t;
-  const titles={home:"💙 Saúde Pessoal",dash:P?.nome||"Dashboard",cat:CATS[cat]?.l||"Documentos","add-d":"Novo Documento","add-p":"Novo Perfil"};
-  document.getElementById('htit').textContent=titles[t]||t;
-  document.getElementById('bbk').classList.toggle('hide',t==='home');
-  document.getElementById('bsync').classList.toggle('hide',t!=='home'&&t!=='dash');
+// ── Navegação ─────────────────────────────────────────────────────────────────
+function ir(t) {
+  ['home','dash','cat','add-d','add-p'].forEach(x=>$('pg-'+x).classList.remove('on'));
+  $('pg-'+t).classList.add('on');
+  telaAtual=t;
+
+  const tits={home:"💙 Saúde Pessoal",dash:P?.nome||"Dashboard",cat:CATS[catAtual]?.l||"Documentos","add-d":"Novo Documento","add-p":"Novo Perfil"};
+  $('h-tit').textContent=tits[t]||t;
+  $('bbk').classList.toggle('h',t==='home');
+  $('b-sync').classList.toggle('h',t!=='home'&&t!=='dash');
+
   const hp=!!P;
-  document.getElementById('nb-h').className='nb'+(t==='home'?' on':'');
-  document.getElementById('nb-d').className='nb'+(t==='dash'?' on':'')+(hp?'':' hide');
-  document.getElementById('nb-n').className='nb'+(t==='add-d'?' on':'')+(hp?'':' hide');
-  if(t==='home')renderHome();
-  if(t==='dash')renderDash();
-  if(t==='cat')renderCat();
-  if(t==='add-p')renderCP();
-  if(t==='add-d'){vals=[];renderVals([]);document.getElementById('ia-box').classList.add('hide');document.getElementById('area-vals').classList.remove('hide');}
-}
-function voltar(){
-  if(tela==='cat')go('dash');
-  else if(tela==='add-d')go(P?'dash':'home');
-  else if(tela==='add-p')go('home');
-  else go('home');
+  $('nb-home').className='nb'+(t==='home'?' on':'');
+  $('nb-dash').className='nb'+(t==='dash'?' on':'')+(hp?'':' h');
+  $('nb-novo').className='nb'+(t==='add-d'?' on':'')+(hp?'':' h');
+
+  if(t==='home') renderHome();
+  if(t==='dash') renderDash();
+  if(t==='cat') renderCat();
+  if(t==='add-p') renderCP();
+  if(t==='add-d') { vals=[]; renderVals([]); $('ia-load').classList.add('h'); $('area-vals').classList.remove('h'); }
 }
 
-// PERFIL UI
-function renderCP(){
-  document.getElementById('cp').innerHTML=CORES.map((c,i)=>`<div class="cc ${corSel===i?'on':''}" style="background:${c};" onclick="selC(${i})"></div>`).join('');
+function voltar() {
+  if(telaAtual==='cat') ir('dash');
+  else if(telaAtual==='add-d') ir(P?'dash':'home');
+  else if(telaAtual==='add-p') ir('home');
+  else ir('home');
+}
+
+// ── Perfil UI ─────────────────────────────────────────────────────────────────
+function renderCP() {
+  $('cp').innerHTML=CORES.map((c,i)=>`<div class="cc ${corSel===i?'on':''}" style="background:${c};" onclick="selC(${i})"></div>`).join('');
   prevAv();
 }
 function selC(i){corSel=i;renderCP();}
 function prevAv(){
-  const n=document.getElementById('p-nome')?.value||'';const bg=CORES[corSel%CORES.length];
-  document.getElementById('av-prev').innerHTML=n?`<div class="avatar" style="width:50px;height:50px;background:${bg};font-size:18px;">${ini(n)}</div>`:'';
+  const n=$('p-nome')?.value||'', bg=CORES[corSel%CORES.length];
+  $('av-prev').innerHTML=n?`<div class="av" style="width:50px;height:50px;background:${bg};font-size:18px;">${ini(n)}</div>`:'';
 }
 
-// UTILS
-function toast(msg,cor="#6366f1",ms=3000){const t=document.getElementById('tst');t.textContent=msg;t.style.background=cor;t.style.display='block';setTimeout(()=>t.style.display='none',ms);}
-function sub(txt){document.getElementById('hsub').textContent=txt;}
-function showSpin(){
-  const el=document.getElementById('t-home');
-  el.dataset.orig=el.innerHTML;
-  el.innerHTML='<div class="spinner"><div class="sc"></div><div class="st">Carregando do Drive…</div></div>';
+// ── Análises ──────────────────────────────────────────────────────────────────
+const REFS = {
+  // Exames de sangue — valores de referência
+  'Colesterol Total':  {min:0,  max:200, unit:'mg/dL'},
+  'LDL':               {min:0,  max:130, unit:'mg/dL'},
+  'HDL':               {min:40, max:999, unit:'mg/dL', inverso:true},
+  'Triglicerídeos':    {min:0,  max:150, unit:'mg/dL'},
+  'Glicose':           {min:70, max:99,  unit:'mg/dL'},
+  'Hemoglobina':       {min:12, max:17,  unit:'g/dL'},
+  'Hematócrito':       {min:36, max:50,  unit:'%'},
+  'TSH':               {min:0.4,max:4.0, unit:'mUI/L'},
+  'Vitamina D':        {min:30, max:100, unit:'ng/mL'},
+  'Ferritina':         {min:12, max:300, unit:'ng/mL'},
+  'Creatinina':        {min:0.6,max:1.2, unit:'mg/dL'},
+  'Ureia':             {min:15, max:45,  unit:'mg/dL'},
+  // Bioimpedância
+  'IMC':               {min:18.5,max:24.9,unit:'kg/m²'},
+  'Massa Gorda':       {min:0,  max:25,  unit:'%'},
+  'Água Corporal':     {min:50, max:70,  unit:'%', inverso:true},
+};
+
+function statusValor(nome, valor) {
+  const v = parseFloat(valor);
+  if (isNaN(v)) return null;
+  // Busca referência por nome parcial
+  const chave = Object.keys(REFS).find(k => nome?.toLowerCase().includes(k.toLowerCase()));
+  if (!chave) return null;
+  const ref = REFS[chave];
+  if (ref.inverso) {
+    if (v >= ref.min) return 'ok';
+    return 'lo';
+  }
+  if (v < ref.min) return 'lo';
+  if (v > ref.max) return 'hi';
+  return 'ok';
 }
-function hideSpin(){
-  const el=document.getElementById('t-home');
-  if(el.dataset.orig) el.innerHTML=el.dataset.orig;
-  renderHome();
+
+function badgeStatus(s) {
+  if (!s) return '';
+  if (s==='ok') return '<span class="badge badge-ok">✅ Normal</span>';
+  if (s==='hi') return '<span class="badge badge-up">⚠️ Acima</span>';
+  if (s==='lo') return '<span class="badge badge-dn">⚠️ Abaixo</span>';
+  return '';
 }
+
+function calcTendencia(docs, nome) {
+  // Pega os 2 últimos valores de um indicador
+  const vs = docs
+    .filter(d=>d.vals?.some(v=>v.nome===nome))
+    .sort((a,b)=>new Date(a.dt)-new Date(b.dt))
+    .map(d=>d.vals.find(v=>v.nome===nome));
+  if (vs.length < 2) return null;
+  const ant = parseFloat(vs[vs.length-2]?.valor);
+  const ult = parseFloat(vs[vs.length-1]?.valor);
+  if (isNaN(ant)||isNaN(ult)) return null;
+  const diff = ult - ant;
+  const pct = Math.abs((diff/ant)*100).toFixed(1);
+  return {ant, ult, diff, pct};
+}
+
+function renderAnalise(catId) {
+  const c = CATS[catId];
+  const docs = D.docs.filter(d=>d.pid===P?.id&&d.cat===catId).sort((a,b)=>new Date(a.dt)-new Date(b.dt));
+  if (!docs.length) return '';
+
+  const ult = docs[docs.length-1];
+  const pen = docs.length>1 ? docs[docs.length-2] : null;
+
+  // Gera análise de cada valor do último exame
+  let html = `<div class="anl-card"><div class="anl-tit">${c.i} Análise — ${fmt(ult.dt)}</div>`;
+
+  if (ult.vals?.length) {
+    html += '<div class="comp-box">';
+    ult.vals.forEach(v => {
+      const st = statusValor(v.nome, v.valor);
+      const classRef = st==='ok'?'ref-ok':st==='hi'?'ref-hi':st==='lo'?'ref-lo':'';
+
+      // Tendência vs exame anterior
+      let arr = '', diffTxt = '';
+      if (pen) {
+        const vAnt = pen.vals?.find(va=>va.nome===v.nome);
+        if (vAnt) {
+          const diff = parseFloat(v.valor) - parseFloat(vAnt.valor);
+          if (!isNaN(diff)) {
+            if (diff > 0) { arr = '↑'; diffTxt = `+${diff.toFixed(1)}`; }
+            else if (diff < 0) { arr = '↓'; diffTxt = `${diff.toFixed(1)}`; }
+            else { arr = '→'; diffTxt = '='; }
+          }
+        }
+      }
+
+      html += `<div class="comp-row">
+        <span class="comp-n">${v.nome}</span>
+        <span class="comp-v ${classRef}">${v.valor}${v.unidade?' '+v.unidade:''}</span>
+        ${arr?`<span class="comp-arr" style="color:${arr==='↑'?'#dc2626':arr==='↓'?'#16a34a':'#6366f1'}">${arr} ${diffTxt}</span>`:''}
+      </div>`;
+    });
+    html += '</div>';
+
+    // Badge geral
+    const problemas = ult.vals.filter(v=>statusValor(v.nome,v.valor)==='hi'||statusValor(v.nome,v.valor)==='lo');
+    if (problemas.length===0 && ult.vals.some(v=>statusValor(v.nome,v.valor)==='ok')) {
+      html += '<span class="badge badge-ok">✅ Todos os valores normais</span>';
+    } else if (problemas.length>0) {
+      html += `<span class="badge badge-up">⚠️ ${problemas.length} valor${problemas.length>1?'es':''} fora do padrão</span>`;
+    }
+
+    // Evolução positiva?
+    if (pen) {
+      const melhorou = ult.vals.filter(v=>{
+        const vA=pen.vals?.find(a=>a.nome===v.nome);
+        if(!vA)return false;
+        const stNow=statusValor(v.nome,v.valor), stOld=statusValor(v.nome,vA.valor);
+        return stNow==='ok' && stOld!=='ok';
+      }).length;
+      if (melhorou>0) html += `<span class="badge badge-ok" style="margin-left:4px;">📈 ${melhorou} valor${melhorou>1?'es':''} melhorou${melhorou>1?'ram':''}</span>`;
+    }
+  }
+
+  html += '</div>';
+  return html;
+}
+
 </script>
 </body>
 </html>
