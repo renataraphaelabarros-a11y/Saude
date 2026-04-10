@@ -2,850 +2,529 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Meu Prontuário</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Prontuário de Saúde</title>
 <style>
-  :root {
-    --bg: #0d1117;
-    --bg2: #161b22;
-    --bg3: #1c2128;
-    --border: rgba(255,255,255,0.08);
-    --text: #e6edf3;
-    --muted: #6e7681;
-    --accent: #58a6ff;
-    --green: #3fb950;
-    --yellow: #d29922;
-    --pink: #f778ba;
-    --purple: #bc8cff;
-    --orange: #ffa657;
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-    max-width: 480px;
-    margin: 0 auto;
+  :root {
+    --bg:      #f0f4f8;
+    --surface: #ffffff;
+    --border:  #e2e8f0;
+    --text:    #1a202c;
+    --muted:   #718096;
+    --light:   #a0aec0;
+    --accent:  #2b6cb0;
+    --accent2: #3182ce;
+    --green:   #38a169;
+    --red:     #c53030;
+    --shadow:  0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+    --radius:  14px;
+    --font:    Georgia, 'Times New Roman', serif;
   }
-  h1,h2,h3 { font-family: 'Playfair Display', serif; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; max-width:480px; margin:0 auto; }
 
-  /* AUTH SCREEN */
-  #auth-screen {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 24px;
-    text-align: center;
-  }
-  .auth-logo {
-    width: 72px; height: 72px;
-    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
-    border-radius: 20px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px;
-    margin-bottom: 28px;
-    box-shadow: 0 0 40px rgba(88,166,255,0.2);
-  }
-  .auth-title { font-size: 28px; color: var(--text); margin-bottom: 10px; }
-  .auth-sub { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 36px; }
-  .auth-features {
-    width: 100%;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 28px;
-    text-align: left;
-  }
-  .auth-feature {
-    display: flex; align-items: center; gap: 12px;
-    padding: 8px 0;
-    font-size: 14px; color: #8d96a0;
-  }
-  .auth-feature span:first-child { font-size: 18px; }
-  .btn-google {
-    width: 100%;
-    padding: 15px;
-    background: #fff;
-    color: #1a1a1a;
-    border: none;
-    border-radius: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    transition: opacity 0.2s;
-  }
-  .btn-google:hover { opacity: 0.9; }
-  .auth-note { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+  .header { padding:18px 18px 12px; border-bottom:1px solid var(--border); background:var(--surface); position:sticky; top:0; z-index:10; box-shadow:0 1px 0 var(--border); }
+  .logo { font-size:10px; letter-spacing:4px; color:var(--light); text-transform:uppercase; }
+  .header h1 { font-size:20px; color:var(--text); margin-top:2px; }
+  .saving-msg { font-size:11px; color:var(--green); margin-top:3px; }
 
-  /* MAIN APP */
-  #app { display: none; }
-  .header {
-    padding: 20px 20px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
-    position: sticky; top: 0; z-index: 10;
-  }
-  .header-top { display: flex; align-items: center; justify-content: space-between; }
-  .logo-text { font-size: 11px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; }
-  .header-title { font-size: 22px; color: var(--text); }
-  .sync-badge {
-    font-size: 11px; padding: 4px 10px;
-    border-radius: 20px;
-    border: 1px solid rgba(63,185,80,0.3);
-    color: var(--green);
-    background: rgba(63,185,80,0.08);
-  }
-  .sync-badge.syncing { color: var(--yellow); border-color: rgba(210,153,34,0.3); background: rgba(210,153,34,0.08); }
+  .drive-bar { display:flex; gap:8px; padding:9px 16px; border-bottom:1px solid var(--border); background:#ebf8ff; align-items:center; }
+  .drive-status { font-size:12px; color:#2c5282; flex:1; }
+  .drive-btn { font-size:12px; font-family:var(--font); padding:6px 12px; border-radius:8px; cursor:pointer; border:none; background:var(--accent); color:#fff; }
 
-  /* PROFILE BAR */
-  .profile-bar {
-    display: flex; gap: 10px;
-    padding: 14px 20px;
-    overflow-x: auto;
-    border-bottom: 1px solid var(--border);
-    scrollbar-width: none;
-  }
-  .profile-bar::-webkit-scrollbar { display: none; }
-  .avatar {
-    width: 46px; height: 46px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 700;
-    font-family: 'DM Sans', sans-serif;
-    color: #fff;
-    cursor: pointer;
-    border: 2.5px solid transparent;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-  .avatar.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(88,166,255,0.2); }
-  .add-profile-btn {
-    width: 46px; height: 46px;
-    border-radius: 50%;
-    background: transparent;
-    border: 2px dashed rgba(255,255,255,0.15);
-    color: var(--muted);
-    font-size: 22px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.2s;
-  }
-  .add-profile-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .profile-bar { display:flex; gap:10px; padding:13px 16px; overflow-x:auto; background:var(--surface); border-bottom:1px solid var(--border); scrollbar-width:none; }
+  .profile-bar::-webkit-scrollbar { display:none; }
+  .avatar { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:bold; color:#fff; cursor:pointer; flex-shrink:0; border:3px solid transparent; transition:border .2s, box-shadow .2s; user-select:none; }
+  .avatar.active { border-color:var(--accent); box-shadow:0 0 0 2px #bee3f8; }
+  .add-avatar { width:46px; height:46px; border-radius:50%; background:var(--bg); border:2px dashed var(--border); color:var(--light); font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
 
-  /* BODY */
-  .body { padding: 0 20px 100px; }
-  .section-label {
-    font-size: 11px; letter-spacing: 3px;
-    color: var(--muted); text-transform: uppercase;
-    margin: 22px 0 10px;
-  }
+  .body { padding:0 16px 100px; }
+  .section-title { font-size:10px; letter-spacing:3px; color:var(--light); text-transform:uppercase; margin:20px 0 10px; }
 
-  /* CARDS */
-  .card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 18px;
-    margin-bottom: 12px;
-  }
-  .profile-card-inner { display: flex; align-items: center; gap: 14px; }
-  .profile-card-avatar { width: 56px; height: 56px; font-size: 20px; }
-  .profile-name { font-size: 19px; font-family: 'Playfair Display', serif; }
-  .profile-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
-  .edit-btn { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; margin-left: auto; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-top:14px; box-shadow:var(--shadow); }
+  .profile-card-top { display:flex; align-items:center; gap:14px; }
+  .profile-name { font-size:18px; font-weight:bold; }
+  .profile-info { font-size:12px; color:var(--muted); margin-top:3px; }
+  .edit-btn { background:none; border:none; color:var(--light); font-size:18px; cursor:pointer; margin-left:auto; padding:4px; }
 
-  .stats-row { display: flex; gap: 4px; margin-top: 16px; }
-  .stat-item { flex: 1; text-align: center; padding: 8px 4px; background: var(--bg3); border-radius: 10px; }
-  .stat-icon { font-size: 16px; }
-  .stat-num { font-size: 18px; font-weight: 700; margin: 2px 0; }
-  .stat-lbl { font-size: 9px; color: var(--muted); }
+  .stats-row { display:flex; gap:6px; margin-top:14px; }
+  .stat { text-align:center; flex:1; background:var(--bg); border-radius:10px; padding:8px 4px; }
+  .stat-icon { font-size:16px; }
+  .stat-num { font-size:16px; font-weight:bold; margin-top:2px; }
+  .stat-label { font-size:9px; color:var(--muted); margin-top:1px; }
 
-  /* BUTTONS */
-  .btn {
-    width: 100%; padding: 14px;
-    border: none; border-radius: 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px; font-weight: 500;
-    cursor: pointer; margin-top: 10px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: opacity 0.15s, transform 0.1s;
-  }
-  .btn:active { transform: scale(0.98); }
-  .btn-primary { background: var(--accent); color: #0d1117; }
-  .btn-green { background: var(--green); color: #0d1117; }
-  .btn-outline {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
-  .btn-danger { background: transparent; border: 1px solid rgba(248,81,73,0.3); color: #f85149; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn { display:block; width:100%; padding:13px 18px; border-radius:11px; border:none; font-family:var(--font); font-size:15px; cursor:pointer; color:#fff; background:var(--accent); margin-top:10px; text-align:center; transition:opacity .15s; box-shadow:0 2px 6px rgba(43,108,176,.2); }
+  .btn:active { opacity:.85; }
+  .btn-green { background:var(--green); box-shadow:0 2px 6px rgba(56,161,105,.2); }
+  .btn-outline { background:var(--surface); border:1px solid var(--border); color:var(--muted); box-shadow:none; }
+  .btn-red { background:var(--surface); border:1px solid #feb2b2; color:var(--red); box-shadow:none; }
 
-  /* DOC ITEMS */
-  .doc-item {
-    display: flex; align-items: center; gap: 12px;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 12px; padding: 13px 14px;
-    margin-bottom: 9px; cursor: pointer;
-    transition: background 0.15s;
-  }
-  .doc-item:active { background: var(--bg3); }
-  .doc-icon {
-    width: 40px; height: 40px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-  }
-  .doc-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .doc-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .doc-arrow { color: #30363d; font-size: 18px; margin-left: auto; flex-shrink: 0; }
+  .label { font-size:13px; color:var(--muted); margin-top:14px; display:block; font-weight:bold; }
+  input, select, textarea { display:block; width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:11px; color:var(--text); font-family:var(--font); font-size:15px; padding:12px 14px; margin-top:6px; outline:none; -webkit-appearance:none; appearance:none; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+  input:focus, select:focus, textarea:focus { border-color:var(--accent2); box-shadow:0 0 0 3px #bee3f8; }
+  textarea { height:80px; resize:vertical; }
+  select option { background:#fff; color:var(--text); }
 
-  /* FILTERS */
-  .filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; margin-bottom: 6px; }
-  .filters::-webkit-scrollbar { display: none; }
-  .filter-btn {
-    padding: 7px 14px; border-radius: 20px;
-    font-size: 12px; font-family: 'DM Sans', sans-serif;
-    white-space: nowrap; cursor: pointer;
-    border: 1px solid var(--border);
-    background: transparent; color: var(--muted);
-    transition: all 0.15s;
-  }
-  .filter-btn.active { color: #fff; }
+  .color-dots { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .color-dot { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:border .15s; }
+  .color-dot.selected { border-color:var(--accent); box-shadow:0 0 0 2px #bee3f8; }
 
-  /* FORM */
-  .form-label { font-size: 13px; color: var(--muted); margin-top: 16px; margin-bottom: 6px; display: block; }
-  .form-input {
-    width: 100%; padding: 12px 14px;
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--text);
-    font-family: 'DM Sans', sans-serif; font-size: 15px;
-    outline: none; transition: border 0.15s;
-  }
-  .form-input:focus { border-color: var(--accent); }
-  textarea.form-input { height: 80px; resize: vertical; }
-  .file-drop {
-    background: var(--bg3); border: 2px dashed rgba(255,255,255,0.12);
-    border-radius: 12px; padding: 22px;
-    text-align: center; cursor: pointer;
-    margin-top: 6px; transition: border 0.15s;
-  }
-  .file-drop:hover { border-color: var(--accent); }
-  .file-drop.has-file { border-color: rgba(63,185,80,0.4); }
-  .file-drop-text { font-size: 14px; color: var(--muted); }
-  .file-drop-text.ok { color: var(--green); }
+  .back-btn { background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; padding:2px 0; }
+  .page-title { font-size:20px; margin-top:10px; }
 
-  /* COLOR DOTS */
-  .color-dots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .color-dot {
-    width: 30px; height: 30px; border-radius: 50%;
-    cursor: pointer; border: 2.5px solid transparent;
-    transition: all 0.15s;
-  }
-  .color-dot.selected { border-color: #fff; transform: scale(1.15); }
+  .doc-item { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; cursor:pointer; box-shadow:var(--shadow); transition:box-shadow .15s; }
+  .doc-item:active { box-shadow:none; }
+  .doc-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .doc-name { font-size:15px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .doc-meta { font-size:12px; color:var(--muted); margin-top:2px; }
 
-  /* PAGE HEADER */
-  .page-header { padding: 16px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
-  .back-btn { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; }
-  .page-title { font-size: 18px; font-family: 'Playfair Display', serif; }
+  .filter-bar { display:flex; gap:6px; overflow-x:auto; padding:12px 0 4px; scrollbar-width:none; }
+  .filter-bar::-webkit-scrollbar { display:none; }
+  .filter-btn { padding:7px 14px; border-radius:20px; font-size:12px; font-family:var(--font); border:1.5px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; white-space:nowrap; transition:all .15s; }
+  .filter-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 2px 6px rgba(43,108,176,.2); }
 
-  /* EMPTY STATE */
-  .empty-state { text-align: center; padding: 60px 20px; }
-  .empty-icon { font-size: 52px; margin-bottom: 16px; }
-  .empty-title { font-size: 17px; color: #8d96a0; margin-bottom: 8px; }
-  .empty-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .upload-box { background:var(--bg); border:2px dashed var(--border); border-radius:var(--radius); padding:22px; text-align:center; cursor:pointer; margin-top:8px; transition:border-color .15s; }
+  .upload-box:hover { border-color:var(--accent2); }
+  .upload-box.has-file { border-color:var(--green); background:#f0fff4; }
+  .upload-text { color:var(--muted); font-size:14px; }
+  .upload-text.success { color:var(--green); font-weight:bold; }
 
-  /* PREVIEW */
-  .preview-img { width: 100%; border-radius: 12px; margin-top: 14px; }
-  .preview-iframe { width: 100%; height: 500px; border: none; border-radius: 12px; margin-top: 14px; }
+  .empty { text-align:center; padding:50px 20px; }
+  .empty-icon { font-size:48px; margin-bottom:14px; }
+  .empty-text { font-size:16px; color:var(--muted); }
+  .empty-sub { font-size:13px; color:var(--light); margin-top:6px; }
 
-  /* USER INFO in header */
-  .user-info { display: flex; align-items: center; gap: 8px; }
-  .user-pic { width: 28px; height: 28px; border-radius: 50%; }
-  .logout-btn { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .profile-preview { display:flex; align-items:center; gap:12px; background:var(--bg); border-radius:12px; padding:12px 14px; margin-top:16px; }
 
-  /* TOAST */
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 20px;
-    font-size: 14px; color: var(--text);
-    z-index: 100; opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none; white-space: nowrap;
-  }
-  .toast.show { opacity: 1; }
+  .info-box { background:#ebf8ff; border:1px solid #bee3f8; border-radius:12px; padding:14px; margin:14px 0; }
+  .info-box-title { font-size:13px; font-weight:bold; color:#2c5282; margin-bottom:8px; }
+  .info-box-body { font-size:13px; color:#2c5282; line-height:1.8; }
+  code { background:#e2e8f0; padding:2px 6px; border-radius:4px; font-size:12px; color:var(--accent); }
 
-  select.form-input option { background: #1c2128; }
+  .hidden { display:none !important; }
 </style>
 </head>
 <body>
 
-<!-- AUTH SCREEN -->
-<div id="auth-screen">
-  <div class="auth-logo">🩺</div>
-  <h1 class="auth-title">Meu Prontuário</h1>
-  <p class="auth-sub">Seus exames, receitas e documentos de saúde organizados e sempre acessíveis.</p>
-  <div class="auth-features">
-    <div class="auth-feature"><span>☁️</span> <span>Salvo no seu Google Drive — nunca perde</span></div>
-    <div class="auth-feature"><span>📱</span> <span>Funciona em qualquer celular ou computador</span></div>
-    <div class="auth-feature"><span>👨‍👩‍👧</span> <span>Perfis separados para toda a família</span></div>
-    <div class="auth-feature"><span>📎</span> <span>Importe exames, receitas e atestados</span></div>
-    <div class="auth-feature"><span>🔒</span> <span>Seus dados ficam só no seu Drive</span></div>
+<!-- HOME -->
+<div id="view-home">
+  <div class="header">
+    <div class="logo">Prontuário Pessoal</div>
+    <h1>Saúde da Família</h1>
+    <div class="saving-msg hidden" id="saving-msg">✓ Salvo</div>
   </div>
-  <button class="btn-google" onclick="signIn()">
-    <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 01-7.18-2.54H1.83v2.07A8 8 0 008.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 010-3.04V5.41H1.83a8 8 0 000 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 001.83 5.4L4.5 7.49a4.77 4.77 0 014.48-3.3z"/></svg>
-    Entrar com Google
-  </button>
-  <p class="auth-note">Ao entrar, o app cria um arquivo <strong>meu-prontuario.json</strong> no seu Google Drive para salvar seus dados.</p>
+  <div class="drive-bar">
+    <div class="drive-status">📂 Dados salvos neste dispositivo</div>
+    <button class="drive-btn" onclick="showView('view-drive')">☁ Backup</button>
+  </div>
+  <div class="profile-bar" id="profile-bar"></div>
+  <div class="body" id="home-body"></div>
 </div>
 
-<!-- MAIN APP -->
-<div id="app">
-
-  <!-- SCREENS managed by JS -->
-  <div id="screen-home"></div>
-  <div id="screen-docs" style="display:none"></div>
-  <div id="screen-add-doc" style="display:none"></div>
-  <div id="screen-profile-form" style="display:none"></div>
-  <div id="screen-doc-preview" style="display:none"></div>
-
+<!-- DOCS -->
+<div id="view-docs" class="hidden">
+  <div class="header">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+      <div class="avatar" id="docs-avatar" style="width:46px;height:46px;font-size:17px;border:none;flex-shrink:0"></div>
+      <div>
+        <div style="font-size:17px;font-weight:bold" id="docs-profile-name"></div>
+        <div style="font-size:12px;color:var(--muted)" id="docs-count"></div>
+      </div>
+    </div>
+    <div class="filter-bar" id="filter-bar"></div>
+  </div>
+  <div class="body">
+    <div id="docs-list"></div>
+    <button class="btn btn-green" onclick="showAddDoc()">+ Adicionar documento</button>
+  </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- PROFILE FORM -->
+<div id="view-profile-form" class="hidden">
+  <div class="header">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div class="page-title" id="profile-form-title">Novo Perfil</div>
+  </div>
+  <div class="body" style="padding-top:14px">
+    <div class="card">
+      <label class="label" style="margin-top:0">Nome completo</label>
+      <input type="text" id="pf-nome" placeholder="Ex: Maria Silva" autocomplete="off">
+      <label class="label">Data de nascimento</label>
+      <input type="date" id="pf-nasc">
+      <label class="label">Sexo</label>
+      <select id="pf-sexo">
+        <option value="">Selecionar…</option>
+        <option value="F">Feminino</option>
+        <option value="M">Masculino</option>
+        <option value="O">Outro</option>
+      </select>
+      <label class="label">Cor do avatar</label>
+      <div class="color-dots" id="color-dots"></div>
+      <div class="profile-preview hidden" id="profile-preview-row">
+        <div class="avatar" id="profile-preview-avatar" style="border:none;width:46px;height:46px;font-size:17px;flex-shrink:0"></div>
+        <span id="profile-preview-name" style="font-size:16px;font-weight:bold"></span>
+      </div>
+    </div>
+    <button class="btn" onclick="saveProfile()" id="save-profile-btn">Criar perfil</button>
+    <button class="btn btn-red hidden" id="delete-profile-btn" onclick="deleteProfile()">🗑 Excluir este perfil</button>
+  </div>
+</div>
 
-<!-- Google API -->
-<script src="https://apis.google.com/js/api.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- ADD DOC -->
+<div id="view-add-doc" class="hidden">
+  <div class="header">
+    <button class="back-btn" onclick="showDocs()">←</button>
+    <div class="page-title">Adicionar Documento</div>
+  </div>
+  <div class="body" style="padding-top:14px">
+    <div class="card">
+      <label class="label" style="margin-top:0">Nome / descrição</label>
+      <input type="text" id="doc-nome" placeholder="Ex: Hemograma completo" autocomplete="off">
+      <label class="label">Categoria</label>
+      <select id="doc-cat">
+        <option value="exame">🧪 Exame</option>
+        <option value="bioimpedancia">⚖️ Bioimpedância</option>
+        <option value="atestado">📋 Atestado</option>
+        <option value="receita">💊 Receita</option>
+        <option value="outro">📎 Outro</option>
+      </select>
+      <label class="label">Data do documento</label>
+      <input type="date" id="doc-data">
+      <label class="label">Observações (opcional)</label>
+      <textarea id="doc-obs" placeholder="Notas adicionais…"></textarea>
+      <label class="label">Arquivo (imagem ou PDF)</label>
+      <div class="upload-box" id="upload-box" onclick="document.getElementById('file-input').click()">
+        <div style="font-size:28px;margin-bottom:6px">📎</div>
+        <div class="upload-text" id="upload-text">Toque para selecionar arquivo</div>
+        <div style="font-size:11px;color:var(--light);margin-top:4px">Imagem ou PDF</div>
+      </div>
+      <input type="file" id="file-input" accept="image/*,application/pdf" style="display:none" onchange="handleFile(this)">
+    </div>
+    <button class="btn btn-green" onclick="saveDoc()">✓ Salvar documento</button>
+    <button class="btn btn-outline" onclick="showDocs()">Cancelar</button>
+  </div>
+</div>
+
+<!-- DOC DETAIL -->
+<div id="view-doc-detail" class="hidden">
+  <div class="header">
+    <button class="back-btn" onclick="showDocs()">←</button>
+    <div style="margin-top:10px">
+      <div style="font-size:19px;font-weight:bold" id="detail-nome"></div>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px" id="detail-meta"></div>
+    </div>
+  </div>
+  <div class="body" style="padding-top:14px">
+    <div class="card">
+      <p style="font-size:14px;color:var(--muted);line-height:1.6" id="detail-obs"></p>
+      <div id="detail-preview" style="margin-top:10px"></div>
+    </div>
+    <button class="btn btn-red" style="margin-top:16px" onclick="deleteDoc()">🗑 Excluir documento</button>
+  </div>
+</div>
+
+<!-- BACKUP -->
+<div id="view-drive" class="hidden">
+  <div class="header">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div class="page-title">☁ Backup & Restauração</div>
+  </div>
+  <div class="body" style="padding-top:14px">
+    <div class="card">
+      <p style="font-size:14px;color:var(--muted);line-height:1.7;margin:0">
+        Os dados ficam salvos neste dispositivo. Faça backup para não perder nada ao trocar de celular.
+      </p>
+    </div>
+    <div class="info-box">
+      <div class="info-box-title">📋 Como salvar no Google Drive</div>
+      <div class="info-box-body">
+        1. Clique em <strong>Baixar backup</strong><br>
+        2. Salve o arquivo <code>prontuario-saude.json</code> no Drive<br>
+        3. Para restaurar: baixe do Drive e clique em <strong>Importar backup</strong>
+      </div>
+    </div>
+    <p class="section-title">Exportar</p>
+    <button class="btn btn-green" onclick="exportData()">⬇ Baixar backup (.json)</button>
+    <p class="section-title">Importar</p>
+    <button class="btn" onclick="document.getElementById('import-input').click()">📂 Importar backup (.json)</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="handleImport(this)">
+    <div style="margin-top:16px;padding:12px 14px;background:#fffbeb;border:1px solid #fbd38d;border-radius:12px;font-size:12px;color:#744210;line-height:1.6">
+      ⚠️ <strong>Atenção:</strong> Importar substitui todos os dados atuais. Faça backup antes de importar.
+    </div>
+  </div>
+</div>
 
 <script>
-// ===================== CONFIG =====================
-const CLIENT_ID = ''; // Deixe vazio — app funciona em modo local com fallback
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-const FILE_NAME = 'meu-prontuario.json';
-const CATS = [
-  { id:'exame',        label:'Exame',         icon:'🧪', color:'#3fb950' },
-  { id:'bioimpedancia',label:'Bioimpedância',  icon:'⚖️',  color:'#58a6ff' },
-  { id:'atestado',     label:'Atestado',       icon:'📋', color:'#d29922' },
-  { id:'receita',      label:'Receita',        icon:'💊', color:'#f778ba' },
-  { id:'outro',        label:'Outro',          icon:'📎', color:'#bc8cff' },
-];
-const COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#6366f1','#ec4899','#14b8a6'];
-
-// ===================== STATE =====================
-let state = {
-  profiles: [],
-  docs: [],
+const CATS = {
+  exame:         { label:'Exame',         icon:'🧪', color:'#276749', bg:'#c6f6d5' },
+  bioimpedancia: { label:'Bioimpedância', icon:'⚖️', color:'#2b6cb0', bg:'#bee3f8' },
+  atestado:      { label:'Atestado',      icon:'📋', color:'#744210', bg:'#fefcbf' },
+  receita:       { label:'Receita',       icon:'💊', color:'#702459', bg:'#fed7e2' },
+  outro:         { label:'Outro',         icon:'📎', color:'#44337a', bg:'#e9d8fd' },
 };
+const COLORS = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#805ad5','#d53f8c'];
+
+let db = { profiles:[], docs:[] };
 let activeProfileId = null;
-let currentView = 'home';
 let filterCat = 'all';
-let tempDoc = { nome:'', categoria:'exame', data:'', obs:'', fileData:null, fileName:null, fileType:null };
-let tempProfile = { nome:'', nascimento:'', sexo:'', cor: COLORS[0] };
 let editingProfileId = null;
-let previewDocId = null;
-let driveFileId = null;
-let userInfo = null;
-let tokenClient = null;
-let accessToken = null;
-let useDrive = false;
-let syncing = false;
+let selectedColor = COLORS[5];
+let pendingFile = null;
+let viewingDocId = null;
 
-// ===================== INIT =====================
-window.onload = () => {
-  // Try to restore from localStorage first
-  const saved = localStorage.getItem('prontuario_local');
-  if (saved) {
-    try { state = JSON.parse(saved); } catch(e) {}
-    if (state.profiles?.length) activeProfileId = state.profiles[0].id;
-  }
-
-  // Check if Google API is available
-  if (typeof google !== 'undefined') {
-    setupGoogleAuth();
-  } else {
-    // Fallback: use localStorage only
-    showAuthScreenWithLocalOption();
-  }
-};
-
-function showAuthScreenWithLocalOption() {
-  // Add local option to auth screen
-  const authScreen = document.getElementById('auth-screen');
-  const localBtn = document.createElement('button');
-  localBtn.className = 'btn-google';
-  localBtn.style.marginTop = '10px';
-  localBtn.style.background = '#1c2128';
-  localBtn.style.color = '#e6edf3';
-  localBtn.style.border = '1px solid rgba(255,255,255,0.1)';
-  localBtn.innerHTML = '📱 Usar sem conta Google (salva no celular)';
-  localBtn.onclick = startLocalMode;
-  authScreen.appendChild(localBtn);
+function persist() {
+  try { localStorage.setItem('prontuario_v2', JSON.stringify(db)); } catch(e) {}
+  const el = document.getElementById('saving-msg');
+  el.classList.remove('hidden');
+  setTimeout(()=>el.classList.add('hidden'), 1800);
 }
-
-function startLocalMode() {
-  useDrive = false;
-  showApp();
+function loadLocal() {
+  try { const d=localStorage.getItem('prontuario_v2')||localStorage.getItem('prontuario_v1'); if(d) db=JSON.parse(d); } catch(e) {}
 }
+function initials(n) { return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase(); }
+function fmtDate(iso) { if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+function today() { return new Date().toISOString().split('T')[0]; }
+function getProfile(id) { return db.profiles.find(p=>p.id===id); }
+function profileDocs(id) { return db.docs.filter(d=>d.profileId===id); }
 
-function setupGoogleAuth() {
-  if (!CLIENT_ID) {
-    showAuthScreenWithLocalOption();
-    return;
-  }
-  gapi.load('client', async () => {
-    await gapi.client.init({ apiKey: '', discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: handleTokenResponse,
-    });
+const VIEWS = ['view-home','view-docs','view-profile-form','view-add-doc','view-doc-detail','view-drive'];
+function showView(id) { VIEWS.forEach(v=>document.getElementById(v).classList.toggle('hidden',v!==id)); }
+
+function renderColorDots() {
+  const el = document.getElementById('color-dots');
+  el.innerHTML = '';
+  COLORS.forEach(c => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot'+(c===selectedColor?' selected':'');
+    dot.style.background = c;
+    dot.onclick = () => { selectedColor=c; renderColorDots(); updateProfilePreview(); };
+    el.appendChild(dot);
   });
 }
 
-function signIn() {
-  if (!CLIENT_ID) {
-    // Sem CLIENT_ID configurado — usar modo local
-    startLocalMode();
-    return;
-  }
-  tokenClient.requestAccessToken();
+function updateProfilePreview() {
+  const nome = document.getElementById('pf-nome').value.trim();
+  const row = document.getElementById('profile-preview-row');
+  if (nome) {
+    row.classList.remove('hidden');
+    document.getElementById('profile-preview-avatar').style.background = selectedColor;
+    document.getElementById('profile-preview-avatar').textContent = initials(nome);
+    document.getElementById('profile-preview-name').textContent = nome;
+  } else { row.classList.add('hidden'); }
 }
 
-async function handleTokenResponse(resp) {
-  if (resp.error) { showToast('Erro ao conectar'); return; }
-  accessToken = resp.access_token;
-  useDrive = true;
-  await loadFromDrive();
-  showApp();
-}
-
-// ===================== DRIVE =====================
-async function loadFromDrive() {
-  setSyncing(true);
-  try {
-    const list = await gapi.client.drive.files.list({
-      q: `name='${FILE_NAME}' and trashed=false`,
-      spaces: 'drive', fields: 'files(id,name)',
-    });
-    const files = list.result.files;
-    if (files.length > 0) {
-      driveFileId = files[0].id;
-      const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      const data = await resp.json();
-      state = data;
-      if (state.profiles?.length) activeProfileId = state.profiles[0].id;
-    }
-  } catch(e) { showToast('Carregando dados locais'); }
-  setSyncing(false);
-}
-
-async function saveToDrive() {
-  localStorage.setItem('prontuario_local', JSON.stringify(state));
-  if (!useDrive || !accessToken) return;
-  setSyncing(true);
-  try {
-    const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
-    if (driveFileId) {
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: blob,
-      });
-    } else {
-      const meta = { name: FILE_NAME, mimeType: 'application/json' };
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
-      form.append('file', blob);
-      const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body: form,
-      });
-      const data = await resp.json();
-      driveFileId = data.id;
-    }
-    showToast('✓ Salvo no Google Drive');
-  } catch(e) { showToast('Salvo localmente'); }
-  setSyncing(false);
-}
-
-function setSyncing(v) {
-  syncing = v;
-  const badge = document.getElementById('sync-badge');
-  if (badge) {
-    badge.textContent = v ? '⟳ Sincronizando' : (useDrive ? '✓ Google Drive' : '📱 Local');
-    badge.className = 'sync-badge' + (v ? ' syncing' : '');
-  }
-}
-
-// ===================== APP RENDER =====================
-function showApp() {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  renderHome();
+function renderProfileBar() {
+  const bar = document.getElementById('profile-bar');
+  bar.innerHTML = '';
+  db.profiles.forEach(p => {
+    const av = document.createElement('div');
+    av.className = 'avatar'+(p.id===activeProfileId?' active':'');
+    av.style.background = p.cor;
+    av.title = p.nome;
+    av.textContent = initials(p.nome);
+    av.onclick = () => { activeProfileId=p.id; renderHome(); };
+    bar.appendChild(av);
+  });
+  const add = document.createElement('div');
+  add.className = 'add-avatar';
+  add.textContent = '+';
+  add.onclick = showAddProfile;
+  bar.appendChild(add);
 }
 
 function renderHome() {
-  currentView = 'home';
-  hideAllScreens();
-  document.getElementById('screen-home').style.display = 'block';
-
-  const profile = state.profiles.find(p => p.id === activeProfileId);
-  const myDocs = profile ? state.docs.filter(d => d.profileId === activeProfileId) : [];
-
-  document.getElementById('screen-home').innerHTML = `
-    <div class="header">
-      <div class="header-top">
+  renderProfileBar();
+  const body = document.getElementById('home-body');
+  const p = getProfile(activeProfileId);
+  if (!p) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">🏥</div><div class="empty-text">Nenhum perfil criado</div><div class="empty-sub">Adicione um membro da família para começar</div><button class="btn" onclick="showAddProfile()" style="margin-top:20px;max-width:280px;margin-left:auto;margin-right:auto">+ Criar primeiro perfil</button></div>`;
+    return;
+  }
+  const docs = profileDocs(p.id);
+  const counts = Object.fromEntries(Object.keys(CATS).map(k=>[k,docs.filter(d=>d.categoria===k).length]));
+  const recentes = [...docs].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,3);
+  body.innerHTML = `
+    <div class="card">
+      <div class="profile-card-top">
+        <div class="avatar" style="background:${p.cor};width:54px;height:54px;font-size:20px;border:none;flex-shrink:0">${initials(p.nome)}</div>
         <div>
-          <div class="logo-text">Prontuário</div>
-          <h1 class="header-title">Meu Saúde</h1>
+          <div class="profile-name">${p.nome}</div>
+          <div class="profile-info">${p.nascimento?'Nasc.: '+fmtDate(p.nascimento):''}${p.nascimento&&p.sexo?' · ':''}${p.sexo?({F:'Feminino',M:'Masculino',O:'Outro'}[p.sexo]||''):''}</div>
         </div>
-        <span class="sync-badge" id="sync-badge">${useDrive ? '✓ Google Drive' : '📱 Local'}</span>
+        <button class="edit-btn" onclick="showEditProfile('${p.id}')">✏️</button>
+      </div>
+      <div class="stats-row">
+        ${Object.entries(CATS).map(([k,v])=>`<div class="stat"><div class="stat-icon">${v.icon}</div><div class="stat-num" style="color:${v.color}">${counts[k]||0}</div><div class="stat-label">${v.label}</div></div>`).join('')}
       </div>
     </div>
-    <div class="profile-bar">
-      ${state.profiles.map(p => `
-        <div class="avatar ${p.id===activeProfileId?'active':''}" style="background:${p.cor}" onclick="selectProfile('${p.id}')" title="${p.nome}">
-          ${getInitials(p.nome)}
-        </div>
-      `).join('')}
-      <div class="add-profile-btn" onclick="showAddProfile()">+</div>
-    </div>
-    <div class="body">
-      ${!profile ? `
-        <div class="empty-state">
-          <div class="empty-icon">👤</div>
-          <div class="empty-title">Nenhum perfil criado</div>
-          <div class="empty-sub" style="margin-bottom:24px">Crie um perfil para organizar os documentos de saúde de cada familiar.</div>
-          <button class="btn btn-primary" onclick="showAddProfile()">+ Criar primeiro perfil</button>
-        </div>
-      ` : `
-        <div class="card" style="margin-top:16px">
-          <div class="profile-card-inner">
-            <div class="avatar profile-card-avatar" style="background:${profile.cor}">${getInitials(profile.nome)}</div>
-            <div style="flex:1">
-              <div class="profile-name">${profile.nome}</div>
-              ${profile.nascimento ? `<div class="profile-meta">Nasc. ${formatDate(profile.nascimento)}${profile.sexo ? ' · '+({F:'Feminino',M:'Masculino',O:'Outro'}[profile.sexo]||'') : ''}</div>` : ''}
-            </div>
-            <button class="edit-btn" onclick="showEditProfile('${profile.id}')">✏️</button>
-          </div>
-          <div class="stats-row">
-            ${CATS.map(c => {
-              const n = myDocs.filter(d=>d.categoria===c.id).length;
-              return `<div class="stat-item">
-                <div class="stat-icon">${c.icon}</div>
-                <div class="stat-num" style="color:${c.color}">${n}</div>
-                <div class="stat-lbl">${c.label}</div>
-              </div>`;
-            }).join('')}
-          </div>
-        </div>
-        <p class="section-label">Documentos</p>
-        <button class="btn btn-primary" onclick="showDocs()">📁 Ver todos (${myDocs.length})</button>
-        <button class="btn btn-green" onclick="showAddDoc()" style="margin-top:8px">+ Adicionar documento</button>
-        ${myDocs.length > 0 ? `
-          <p class="section-label">Recentes</p>
-          ${myDocs.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,3).map(doc => docItemHTML(doc)).join('')}
-        ` : ''}
-      `}
-    </div>
-  `;
-}
-
-function renderDocs() {
-  currentView = 'docs';
-  hideAllScreens();
-  document.getElementById('screen-docs').style.display = 'block';
-
-  const profile = state.profiles.find(p => p.id === activeProfileId);
-  if (!profile) { renderHome(); return; }
-  const allDocs = state.docs.filter(d => d.profileId === activeProfileId);
-  const filtered = filterCat === 'all' ? allDocs : allDocs.filter(d => d.categoria === filterCat);
-  const sorted = filtered.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
-
-  document.getElementById('screen-docs').innerHTML = `
-    <div class="page-header" style="sticky;top:0;background:var(--bg)">
-      <button class="back-btn" onclick="renderHome()">←</button>
-      <div>
-        <div class="page-title">${profile.nome}</div>
-        <div style="font-size:12px;color:var(--muted)">${allDocs.length} documento${allDocs.length!==1?'s':''}</div>
-      </div>
-    </div>
-    <div style="padding:14px 20px 6px">
-      <div class="filters">
-        <button class="filter-btn ${filterCat==='all'?'active':''}" style="${filterCat==='all'?'background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2);color:#fff':''}" onclick="setFilter('all')">Todos</button>
-        ${CATS.map(c=>`<button class="filter-btn ${filterCat===c.id?'active':''}" style="${filterCat===c.id?`border-color:${c.color};color:${c.color};background:${c.color}18`:''}" onclick="setFilter('${c.id}')">${c.icon} ${c.label}</button>`).join('')}
-      </div>
-    </div>
-    <div style="padding:0 20px 100px">
-      ${sorted.length===0 ? `<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-title">Sem documentos aqui</div><div class="empty-sub">Toque em + para adicionar.</div></div>` : sorted.map(doc=>docItemHTML(doc)).join('')}
-      <button class="btn btn-green" onclick="showAddDoc()" style="margin-top:8px">+ Adicionar documento</button>
-    </div>
+    <p class="section-title">Documentos</p>
+    <button class="btn" onclick="showDocs()">📁 Ver todos (${docs.length})</button>
+    <button class="btn btn-green" onclick="showAddDoc()" style="margin-top:8px">+ Adicionar documento</button>
+    ${recentes.length?`<p class="section-title">Recentes</p>${recentes.map(d=>docItemHTML(d)).join('')}`:''}
   `;
 }
 
 function docItemHTML(doc) {
-  const cat = CATS.find(c=>c.id===doc.categoria) || CATS[4];
-  return `<div class="doc-item" onclick="showDocPreview('${doc.id}')">
-    <div class="doc-icon" style="background:${cat.color}18;border:1px solid ${cat.color}30">${cat.icon}</div>
-    <div style="flex:1;min-width:0">
-      <div class="doc-name">${escHtml(doc.nome)}</div>
-      <div class="doc-meta">${cat.label}${doc.data?' · '+formatDate(doc.data):''}</div>
-    </div>
-    <div class="doc-arrow">›</div>
+  const cat = CATS[doc.categoria]||CATS.outro;
+  return `<div class="doc-item" onclick="showDocDetail('${doc.id}')">
+    <div class="doc-icon" style="background:${cat.bg};color:${cat.color}">${cat.icon}</div>
+    <div style="flex:1;min-width:0"><div class="doc-name">${doc.nome}</div><div class="doc-meta">${cat.label}${doc.data?' · '+fmtDate(doc.data):''}</div></div>
+    <div style="color:var(--light);font-size:20px">›</div>
   </div>`;
 }
 
-function renderDocPreview(docId) {
-  currentView = 'preview';
-  hideAllScreens();
-  document.getElementById('screen-doc-preview').style.display = 'block';
-  const doc = state.docs.find(d=>d.id===docId);
-  if (!doc) { renderDocs(); return; }
-  const cat = CATS.find(c=>c.id===doc.categoria)||CATS[4];
+function renderDocs() {
+  const p = getProfile(activeProfileId); if(!p) return;
+  document.getElementById('docs-avatar').style.background = p.cor;
+  document.getElementById('docs-avatar').textContent = initials(p.nome);
+  document.getElementById('docs-profile-name').textContent = p.nome;
+  const docs = profileDocs(p.id);
+  document.getElementById('docs-count').textContent = `${docs.length} documento${docs.length!==1?'s':''}`;
+  const filtered = filterCat==='all' ? docs : docs.filter(d=>d.categoria===filterCat);
+  document.getElementById('filter-bar').innerHTML =
+    `<button class="filter-btn${filterCat==='all'?' active':''}" onclick="setFilter('all')">Todos</button>`+
+    Object.entries(CATS).map(([k,v])=>`<button class="filter-btn${filterCat===k?' active':''}" onclick="setFilter('${k}')">${v.icon} ${v.label}</button>`).join('');
+  const sorted = [...filtered].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  document.getElementById('docs-list').innerHTML = sorted.length
+    ? sorted.map(d=>docItemHTML(d)).join('')
+    : `<div class="empty"><div class="empty-icon">${filterCat==='all'?'📁':CATS[filterCat]?.icon||'📁'}</div><div class="empty-text">Nenhum documento</div><div class="empty-sub">Adicione o primeiro!</div></div>`;
+}
 
-  let fileHTML = '';
+function showHome() { showView('view-home'); renderHome(); }
+function showDocs() { showView('view-docs'); renderDocs(); }
+function setFilter(cat) { filterCat=cat; renderDocs(); }
+
+function showAddProfile() {
+  editingProfileId=null; selectedColor=COLORS[5];
+  document.getElementById('profile-form-title').textContent='Novo Perfil';
+  document.getElementById('pf-nome').value='';
+  document.getElementById('pf-nasc').value='';
+  document.getElementById('pf-sexo').value='';
+  document.getElementById('save-profile-btn').textContent='Criar perfil';
+  document.getElementById('delete-profile-btn').classList.add('hidden');
+  document.getElementById('profile-preview-row').classList.add('hidden');
+  renderColorDots(); showView('view-profile-form');
+  setTimeout(()=>document.getElementById('pf-nome').focus(),150);
+}
+
+function showEditProfile(id) {
+  const p=getProfile(id); if(!p) return;
+  editingProfileId=id; selectedColor=p.cor;
+  document.getElementById('profile-form-title').textContent='Editar Perfil';
+  document.getElementById('pf-nome').value=p.nome;
+  document.getElementById('pf-nasc').value=p.nascimento||'';
+  document.getElementById('pf-sexo').value=p.sexo||'';
+  document.getElementById('save-profile-btn').textContent='Salvar alterações';
+  document.getElementById('delete-profile-btn').classList.remove('hidden');
+  renderColorDots(); updateProfilePreview(); showView('view-profile-form');
+}
+
+function showAddDoc() {
+  document.getElementById('doc-nome').value='';
+  document.getElementById('doc-cat').value='exame';
+  document.getElementById('doc-data').value=today();
+  document.getElementById('doc-obs').value='';
+  document.getElementById('upload-text').textContent='Toque para selecionar arquivo';
+  document.getElementById('upload-text').classList.remove('success');
+  document.getElementById('upload-box').classList.remove('has-file');
+  pendingFile=null; showView('view-add-doc');
+  setTimeout(()=>document.getElementById('doc-nome').focus(),150);
+}
+
+function showDocDetail(id) {
+  viewingDocId=id;
+  const doc=db.docs.find(d=>d.id===id); if(!doc) return;
+  const cat=CATS[doc.categoria]||CATS.outro;
+  document.getElementById('detail-nome').textContent=doc.nome;
+  document.getElementById('detail-meta').textContent=`${cat.icon} ${cat.label}${doc.data?' · '+fmtDate(doc.data):''}`;
+  const obsEl=document.getElementById('detail-obs');
+  obsEl.textContent=doc.obs||''; obsEl.style.display=doc.obs?'block':'none';
+  const prev=document.getElementById('detail-preview');
   if (doc.fileData) {
-    if (doc.fileType?.startsWith('image/')) {
-      fileHTML = `<img src="${doc.fileData}" class="preview-img" alt="${escHtml(doc.fileName||'')}">`;
-    } else if (doc.fileType==='application/pdf') {
-      fileHTML = `<iframe src="${doc.fileData}" class="preview-iframe" title="${escHtml(doc.fileName||'')}"></iframe>`;
-    } else {
-      fileHTML = `<a href="${doc.fileData}" download="${escHtml(doc.fileName||'arquivo')}" class="btn btn-primary" style="text-decoration:none;margin-top:14px">⬇ Baixar ${escHtml(doc.fileName||'arquivo')}</a>`;
-    }
-  }
-
-  document.getElementById('screen-doc-preview').innerHTML = `
-    <div class="page-header">
-      <button class="back-btn" onclick="renderDocs()">←</button>
-      <div style="flex:1">
-        <div class="page-title" style="font-size:17px">${escHtml(doc.nome)}</div>
-        <div style="font-size:12px;color:var(--muted)">${cat.icon} ${cat.label}${doc.data?' · '+formatDate(doc.data):''}</div>
-      </div>
-    </div>
-    <div style="padding:16px 20px 100px">
-      ${doc.obs ? `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:14px;color:#8d96a0;line-height:1.6">${escHtml(doc.obs)}</div>` : ''}
-      ${fileHTML}
-      <button class="btn btn-danger" style="margin-top:20px" onclick="deleteDoc('${doc.id}')">🗑 Excluir documento</button>
-    </div>
-  `;
-}
-
-function renderAddDoc() {
-  currentView = 'add-doc';
-  hideAllScreens();
-  document.getElementById('screen-add-doc').style.display = 'block';
-  tempDoc = { nome:'', categoria:'exame', data:'', obs:'', fileData:null, fileName:null, fileType:null };
-
-  document.getElementById('screen-add-doc').innerHTML = `
-    <div class="page-header">
-      <button class="back-btn" onclick="renderDocs()">←</button>
-      <div class="page-title">Adicionar Documento</div>
-    </div>
-    <div style="padding:16px 20px 100px">
-      <label class="form-label">Nome / descrição *</label>
-      <input class="form-input" id="doc-nome" placeholder="Ex: Hemograma completo" oninput="tempDoc.nome=this.value">
-      <label class="form-label">Categoria</label>
-      <select class="form-input" id="doc-cat" onchange="tempDoc.categoria=this.value">
-        ${CATS.map(c=>`<option value="${c.id}" ${c.id===tempDoc.categoria?'selected':''}>${c.icon} ${c.label}</option>`).join('')}
-      </select>
-      <label class="form-label">Data do documento</label>
-      <input type="date" class="form-input" id="doc-data" oninput="tempDoc.data=this.value">
-      <label class="form-label">Observações (opcional)</label>
-      <textarea class="form-input" id="doc-obs" placeholder="Notas, alertas do médico…" oninput="tempDoc.obs=this.value"></textarea>
-      <label class="form-label">Arquivo (imagem ou PDF)</label>
-      <div class="file-drop ${tempDoc.fileData?'has-file':''}" id="file-drop" onclick="document.getElementById('file-input').click()">
-        <div class="file-drop-text ${tempDoc.fileData?'ok':''}" id="file-drop-text">${tempDoc.fileData ? '✓ '+tempDoc.fileName : 'Toque para selecionar arquivo'}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">Imagem ou PDF</div>
-      </div>
-      <input type="file" id="file-input" accept="image/*,application/pdf" style="display:none" onchange="handleFile(this)">
-      <button class="btn btn-green" onclick="saveDoc()" style="margin-top:16px" id="save-doc-btn">Salvar documento</button>
-    </div>
-  `;
-}
-
-function renderProfileForm(editId) {
-  currentView = 'profile-form';
-  hideAllScreens();
-  document.getElementById('screen-profile-form').style.display = 'block';
-  editingProfileId = editId || null;
-
-  if (editId) {
-    const p = state.profiles.find(x=>x.id===editId);
-    tempProfile = { ...p };
+    if (doc.fileType?.startsWith('image/')) prev.innerHTML=`<img src="${doc.fileData}" alt="" style="width:100%;border-radius:10px">`;
+    else if (doc.fileType==='application/pdf') prev.innerHTML=`<iframe src="${doc.fileData}" style="width:100%;height:500px;border:none;border-radius:10px"></iframe>`;
+    else prev.innerHTML=`<a href="${doc.fileData}" download="${doc.fileName||'arquivo'}" class="btn btn-outline" style="text-decoration:none;display:block;text-align:center">⬇ Baixar ${doc.fileName||'arquivo'}</a>`;
   } else {
-    tempProfile = { nome:'', nascimento:'', sexo:'', cor: COLORS[0] };
+    prev.innerHTML='<div style="color:var(--light);font-size:13px;text-align:center;padding:10px 0">Nenhum arquivo anexado</div>';
   }
-
-  document.getElementById('screen-profile-form').innerHTML = `
-    <div class="page-header">
-      <button class="back-btn" onclick="renderHome()">←</button>
-      <div class="page-title">${editId ? 'Editar Perfil' : 'Novo Perfil'}</div>
-    </div>
-    <div style="padding:16px 20px 100px">
-      ${tempProfile.nome ? `<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <div class="avatar" style="background:${tempProfile.cor};width:52px;height:52px;font-size:18px">${getInitials(tempProfile.nome)}</div>
-        <div style="font-family:'Playfair Display',serif;font-size:17px">${escHtml(tempProfile.nome)}</div>
-      </div>` : ''}
-      <label class="form-label">Nome completo *</label>
-      <input class="form-input" id="pf-nome" value="${escHtml(tempProfile.nome)}" placeholder="Ex: Maria Silva" oninput="tempProfile.nome=this.value;updateProfilePreview()">
-      <label class="form-label">Data de nascimento</label>
-      <input type="date" class="form-input" id="pf-nasc" value="${tempProfile.nascimento||''}" oninput="tempProfile.nascimento=this.value">
-      <label class="form-label">Sexo</label>
-      <select class="form-input" id="pf-sexo" onchange="tempProfile.sexo=this.value">
-        <option value="">Selecionar…</option>
-        <option value="F" ${tempProfile.sexo==='F'?'selected':''}>Feminino</option>
-        <option value="M" ${tempProfile.sexo==='M'?'selected':''}>Masculino</option>
-        <option value="O" ${tempProfile.sexo==='O'?'selected':''}>Outro</option>
-      </select>
-      <label class="form-label">Cor do avatar</label>
-      <div class="color-dots">
-        ${COLORS.map(c=>`<div class="color-dot ${c===tempProfile.cor?'selected':''}" style="background:${c}" onclick="selectColor('${c}')"></div>`).join('')}
-      </div>
-      <button class="btn btn-primary" onclick="saveProfile()" style="margin-top:20px">${editId ? 'Salvar alterações' : 'Criar perfil'}</button>
-      ${editId ? `<button class="btn btn-danger" onclick="deleteProfile('${editId}')">🗑 Excluir perfil e dados</button>` : ''}
-    </div>
-  `;
+  showView('view-doc-detail');
 }
 
-// ===================== ACTIONS =====================
-function selectProfile(id) { activeProfileId = id; renderHome(); }
-function showDocs() { renderDocs(); }
-function showAddDoc() { renderAddDoc(); }
-function showAddProfile() { renderProfileForm(null); }
-function showEditProfile(id) { renderProfileForm(id); }
-function showDocPreview(id) { renderDocPreview(id); }
-function setFilter(cat) { filterCat = cat; renderDocs(); }
-
-function selectColor(c) {
-  tempProfile.cor = c;
-  document.querySelectorAll('.color-dot').forEach(d => {
-    d.classList.toggle('selected', d.style.background===c||d.style.backgroundColor===c);
-  });
-  updateProfilePreview();
+function saveProfile() {
+  const nome=document.getElementById('pf-nome').value.trim();
+  if (!nome) { alert('Digite o nome completo.'); return; }
+  if (editingProfileId) {
+    db.profiles=db.profiles.map(p=>p.id===editingProfileId?{...p,nome,nascimento:document.getElementById('pf-nasc').value,sexo:document.getElementById('pf-sexo').value,cor:selectedColor}:p);
+  } else {
+    const p={id:Date.now().toString(),nome,nascimento:document.getElementById('pf-nasc').value,sexo:document.getElementById('pf-sexo').value,cor:selectedColor};
+    db.profiles.push(p); activeProfileId=p.id;
+  }
+  persist(); showHome();
 }
 
-function updateProfilePreview() {
-  const container = document.getElementById('screen-profile-form').querySelector('div[style*="display:flex"]');
-  if (!container && !tempProfile.nome) return;
-  renderProfileForm(editingProfileId);
-  // Re-focus
+function deleteProfile() {
+  if (!confirm('Excluir o perfil e todos os documentos?')) return;
+  db.docs=db.docs.filter(d=>d.profileId!==editingProfileId);
+  db.profiles=db.profiles.filter(p=>p.id!==editingProfileId);
+  persist(); activeProfileId=db.profiles[0]?.id||null; showHome();
 }
 
 function handleFile(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    tempDoc.fileData = e.target.result;
-    tempDoc.fileName = file.name;
-    tempDoc.fileType = file.type;
-    const drop = document.getElementById('file-drop');
-    const txt = document.getElementById('file-drop-text');
-    if (drop) drop.classList.add('has-file');
-    if (txt) { txt.className='file-drop-text ok'; txt.textContent='✓ '+file.name; }
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    pendingFile={data:ev.target.result,name:file.name,type:file.type};
+    document.getElementById('upload-text').textContent='✓ '+file.name;
+    document.getElementById('upload-text').classList.add('success');
+    document.getElementById('upload-box').classList.add('has-file');
+    const match=file.name.match(/(\d{2})[.\-_](\d{2})[.\-_](\d{4})/);
+    if (match&&!document.getElementById('doc-data').value) document.getElementById('doc-data').value=`${match[3]}-${match[2]}-${match[1]}`;
   };
   reader.readAsDataURL(file);
 }
 
-async function saveDoc() {
-  const nome = document.getElementById('doc-nome')?.value?.trim();
-  if (!nome) { showToast('Informe o nome do documento'); return; }
-  const doc = {
-    id: Date.now().toString(),
-    profileId: activeProfileId,
-    nome,
-    categoria: document.getElementById('doc-cat')?.value || 'exame',
-    data: document.getElementById('doc-data')?.value || '',
-    obs: document.getElementById('doc-obs')?.value || '',
-    fileData: tempDoc.fileData,
-    fileName: tempDoc.fileName,
-    fileType: tempDoc.fileType,
-    createdAt: new Date().toISOString(),
-  };
-  state.docs = [...(state.docs||[]), doc];
-  await saveToDrive();
-  renderDocs();
-  showToast('Documento salvo!');
+function saveDoc() {
+  const nome=document.getElementById('doc-nome').value.trim();
+  if (!nome) { alert('Digite o nome do documento.'); return; }
+  db.docs.push({id:Date.now().toString(),profileId:activeProfileId,nome,categoria:document.getElementById('doc-cat').value,data:document.getElementById('doc-data').value,obs:document.getElementById('doc-obs').value,fileData:pendingFile?.data||null,fileName:pendingFile?.name||null,fileType:pendingFile?.type||null,createdAt:new Date().toISOString()});
+  persist(); showDocs();
 }
 
-async function saveProfile() {
-  const nome = document.getElementById('pf-nome')?.value?.trim();
-  if (!nome) { showToast('Informe o nome'); return; }
-  const p = {
-    id: editingProfileId || Date.now().toString(),
-    nome,
-    nascimento: document.getElementById('pf-nasc')?.value || '',
-    sexo: document.getElementById('pf-sexo')?.value || '',
-    cor: tempProfile.cor,
-  };
-  if (editingProfileId) {
-    state.profiles = state.profiles.map(x => x.id===editingProfileId ? p : x);
-  } else {
-    state.profiles = [...(state.profiles||[]), p];
-    activeProfileId = p.id;
-  }
-  await saveToDrive();
-  renderHome();
-  showToast(editingProfileId ? 'Perfil atualizado!' : 'Perfil criado!');
-}
-
-async function deleteProfile(id) {
-  if (!confirm('Excluir perfil e todos os documentos? Esta ação não pode ser desfeita.')) return;
-  state.profiles = state.profiles.filter(p=>p.id!==id);
-  state.docs = state.docs.filter(d=>d.profileId!==id);
-  activeProfileId = state.profiles[0]?.id || null;
-  await saveToDrive();
-  renderHome();
-}
-
-async function deleteDoc(id) {
+function deleteDoc() {
   if (!confirm('Excluir este documento?')) return;
-  state.docs = state.docs.filter(d=>d.id!==id);
-  await saveToDrive();
-  renderDocs();
-  showToast('Documento excluído');
+  db.docs=db.docs.filter(d=>d.id!==viewingDocId);
+  persist(); showDocs();
 }
 
-// ===================== UTILS =====================
-function hideAllScreens() {
-  ['home','docs','add-doc','profile-form','doc-preview'].forEach(s => {
-    document.getElementById('screen-'+s).style.display='none';
-  });
+function exportData() {
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='prontuario-saude.json'; a.click(); URL.revokeObjectURL(url);
 }
 
-function getInitials(name) {
-  return (name||'').split(' ').filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+function handleImport(input) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try {
+      const imp=JSON.parse(ev.target.result);
+      if (!imp.profiles||!imp.docs) throw new Error();
+      if (!confirm(`Importar ${imp.profiles.length} perfil(s) e ${imp.docs.length} documento(s)?\n\nOs dados atuais serão substituídos.`)) return;
+      db=imp; persist(); activeProfileId=db.profiles[0]?.id||null; showHome();
+      alert('✅ Dados importados com sucesso!');
+    } catch { alert('❌ Arquivo inválido. Use um backup gerado por este aplicativo.'); }
+  };
+  reader.readAsText(file);
 }
 
-function formatDate(iso) {
-  if (!iso) return '';
-  const [y,m,d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
+document.getElementById('pf-nome').addEventListener('input', updateProfilePreview);
 
-function escHtml(str) {
-  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'), 2500);
-}
+loadLocal();
+activeProfileId = db.profiles[0]?.id||null;
+renderColorDots();
+showHome();
 </script>
 </body>
 </html>
