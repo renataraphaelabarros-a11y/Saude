@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Prontuário de Saúde</title>
+<meta name="description" content="Prontuário pessoal de saúde da família">
+<meta name="theme-color" content="#1a9e8f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Saúde">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -123,6 +132,10 @@ textarea{height:70px;resize:vertical}
 .setup-title{font-size:17px;font-weight:800;color:var(--teal);margin-bottom:6px}
 .setup-text{font-size:13px;color:var(--muted);line-height:1.6}
 .info-box{background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:14px;margin:14px;font-size:12px;color:#7a5a00;line-height:1.7}
+.sync-bar{display:flex;align-items:center;gap:8px;padding:6px 14px;background:var(--teal-light);border-bottom:1px solid #b2e0d8;font-size:11px;color:var(--teal)}
+.sync-bar button{margin-left:auto;padding:4px 10px;border-radius:7px;background:var(--teal);color:#fff;border:none;font-size:11px;font-weight:700;cursor:pointer}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{display:inline-block;animation:spin 1s linear infinite}
 .empty{text-align:center;padding:50px 20px}
 .empty-icon{font-size:52px;margin-bottom:14px}
 .empty-text{font-size:16px;color:var(--muted)}
@@ -152,6 +165,10 @@ textarea{height:70px;resize:vertical}
     <div class="drive-dot off" id="drive-dot"></div>
     <div class="drive-bar-text" id="drive-bar-text">Dados salvos localmente</div>
     <button class="drive-bar-btn" id="drive-bar-btn" onclick="navTo('perfil');showDriveSetup()">Conectar Drive</button>
+  </div>
+  <div class="sync-bar hidden" id="sync-bar">
+    <span id="sync-status">&#128197; Sincronizado: --</span>
+    <button onclick="syncExams(true)">&#8635; Sincronizar</button>
   </div>
   <div class="cards-grid" id="cards-grid"></div>
   <div style="height:14px"></div>
@@ -287,30 +304,59 @@ textarea{height:70px;resize:vertical}
     <button class="back-btn" onclick="closePage('page-drive-setup')">&#8592;</button>
     <span class="page-title">Conectar Drive</span>
   </div>
-  <div class="setup-card">
-    <div class="setup-icon">&#9729;&#65039;</div>
-    <div class="setup-title">Integracao com Google Drive</div>
-    <div class="setup-text">Conecte sua conta Google para salvar arquivos automaticamente nas pastas certas e visualizar seus exames com graficos.</div>
-  </div>
-  <div class="form-section" style="padding-top:0">
-    <div class="fcard">
-      <label class="flabel" style="margin-top:0">Google OAuth Client ID</label>
-      <input type="text" id="client-id-input" placeholder="xxxxxx.apps.googleusercontent.com">
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
-        Obtenha em <strong>console.cloud.google.com</strong> &rarr; APIs &amp; Services &rarr; Credentials
-      </div>
+  <!-- Estado: conectado -->
+  <div id="drive-state-connected" class="hidden">
+    <div style="margin:16px 14px;background:var(--green-bg);border:1px solid #a8e6c8;border-radius:var(--radius);padding:20px;text-align:center">
+      <div style="font-size:40px;margin-bottom:8px">&#9989;</div>
+      <div style="font-size:16px;font-weight:800;color:var(--green-text)">Drive Conectado!</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:6px">Seus arquivos ser&#227;o salvos automaticamente nas pastas corretas.</div>
     </div>
-    <button class="btn" onclick="connectDrive()">Conectar com Google</button>
-    <button class="btn btn-red hidden" id="btn-disconnect" onclick="disconnectDrive()">Desconectar Drive</button>
+    <div class="form-section" style="padding-top:0">
+      <button class="btn btn-red" onclick="disconnectDrive()">Desconectar Drive</button>
+    </div>
   </div>
-  <div class="info-box">
-    <strong>Como obter o Client ID:</strong><br>
-    1. Acesse <strong>console.cloud.google.com</strong><br>
-    2. Crie um projeto, ative <strong>Drive API</strong> e <strong>Sheets API</strong><br>
-    3. Credentials &rarr; Create Credentials &rarr; <strong>OAuth 2.0 Client ID</strong><br>
-    4. Tipo: <strong>Web application</strong><br>
-    5. Em Authorized JavaScript Origins adicione a URL onde o app esta aberto<br>
-    6. Cole o Client ID acima e clique em Conectar
+
+  <!-- Estado: tem client ID salvo mas desconectado -->
+  <div id="drive-state-saved" class="hidden">
+    <div class="setup-card">
+      <div class="setup-icon">&#9729;&#65039;</div>
+      <div class="setup-title">Conectar ao Google Drive</div>
+      <div class="setup-text">Clique abaixo para autorizar o acesso ao Drive. Uma janela do Google vai abrir para voc&#234; confirmar.</div>
+    </div>
+    <div class="form-section" style="padding-top:0">
+      <button class="btn" style="font-size:16px;padding:16px" onclick="connectDrive()">
+        &#128279; Conectar com Google
+      </button>
+      <button class="btn btn-grey" style="font-size:12px;margin-top:8px" onclick="showClientIdForm()">Trocar conta / Client ID</button>
+    </div>
+  </div>
+
+  <!-- Estado: primeiro acesso — precisa do Client ID -->
+  <div id="drive-state-setup">
+    <div class="setup-card">
+      <div class="setup-icon">&#9729;&#65039;</div>
+      <div class="setup-title">Configurar Google Drive</div>
+      <div class="setup-text">Configura&#231;&#227;o &#250;nica. Ap&#243;s isso, voc&#234; s&#243; precisar&#225; clicar em "Conectar".</div>
+    </div>
+    <div class="form-section" style="padding-top:0">
+      <div class="fcard">
+        <label class="flabel" style="margin-top:0">Google OAuth Client ID</label>
+        <input type="text" id="client-id-input" placeholder="xxxxxx.apps.googleusercontent.com">
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+          Obtenha em <strong>console.cloud.google.com</strong> &#8594; APIs &amp; Services &#8594; Credentials
+        </div>
+      </div>
+      <button class="btn" onclick="connectDriveFirstTime()">&#128279; Salvar e Conectar</button>
+    </div>
+    <div class="info-box">
+      <strong>Como obter o Client ID (s&#243; uma vez):</strong><br>
+      1. Acesse <strong>console.cloud.google.com</strong><br>
+      2. Crie um projeto, ative <strong>Drive API</strong><br>
+      3. Credentials &#8594; Create Credentials &#8594; <strong>OAuth 2.0 Client ID</strong><br>
+      4. Tipo: <strong>Web application</strong><br>
+      5. Em Authorized JavaScript Origins coloque: <strong>https://renataraphaelabarros-a11y.github.io</strong><br>
+      6. Cole o Client ID acima e clique em Salvar e Conectar
+    </div>
   </div>
 </div>
 
@@ -334,7 +380,138 @@ const CATS={exame:{label:'Exame de Sangue',icon:'&#129978;',color:'#1a6640',bg:'
 const COLORS=['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#805ad5','#d53f8c'];
 const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const KNOWN_FOLDERS={'Renata':'1ImeAne1bS1lA3ZR4j4neNzJ-jrdoOd0A','Jamerson':'1e9COIjqOgCV5W0D0z_ZWkETaXCipc27z','Pedro':'1RpoHBOsCBS2Ig0NhptUcmSlMgeruZ2iD'};
-const RENATA_EXAMS={dates:['Nov/24','Fev/25','Mai/25','Jul/25','Set/25','Dez/25'],groups:{'Sangue & Metabolismo':{'Hemoglobina':{v:[11.9,12.7,12.5,12.6,12.4,13.1],u:'g/dL',lo:12,hi:15,inv:false},'Colesterol Total':{v:[131,162,148,131,134,128],u:'mg/dL',lo:null,hi:190,inv:false},'HDL':{v:[38,45,32,32,31,31],u:'mg/dL',lo:40,hi:null,inv:true},'LDL':{v:[75,95,103,82,91,84],u:'mg/dL',lo:null,hi:130,inv:false},'Glicose':{v:[95,100,82,80,76,77],u:'mg/dL',lo:60,hi:99,inv:false},'HbA1c':{v:[5.6,5.8,5.4,5.1,5.2,5.0],u:'%',lo:null,hi:5.7,inv:false},'Insulina':{v:[null,null,13.5,23.2,9.8,8.1],u:'uUI/mL',lo:3,hi:25,inv:false},'Acido Urico':{v:[7.3,5.8,5.2,5.0,4.4,4.6],u:'mg/dL',lo:1.5,hi:6.0,inv:false},'PCR':{v:[7.3,null,7.04,3.90,4.86,4.81],u:'mg/L',lo:null,hi:1.0,inv:false}},'Tireoide & Hormonios':{'TSH':{v:[null,1.64,0.80,0.90,0.87,1.65],u:'uUI/mL',lo:0.38,hi:5.33,inv:false},'T4 Livre':{v:[null,0.81,0.96,0.92,1.19,1.03],u:'ng/dL',lo:0.54,hi:1.24,inv:false},'Estradiol':{v:[null,null,81,160,27,33],u:'pg/mL',lo:null,hi:null,inv:false},'SHBG':{v:[null,null,29.8,23.4,17,13.5],u:'nmol/L',lo:10.8,hi:180,inv:false},'DHEA-S':{v:[null,null,108,94,136,125],u:'mcg/dL',lo:23,hi:266,inv:false},'Homocisteina':{v:[null,null,14.71,14.36,13.82,16.68],u:'umol/L',lo:5.2,hi:12.7,inv:false}},'Vitaminas & Nutrientes':{'Vitamina D':{v:[null,63.4,46.7,75,74,59],u:'ng/mL',lo:20,hi:60,inv:false},'Vitamina B12':{v:[null,447,509,650,473,535],u:'pg/mL',lo:211,hi:911,inv:false},'Acido Folico':{v:[null,null,9.9,13.66,17.53,24],u:'ng/mL',lo:5.38,hi:null,inv:true},'Ferritina':{v:[null,39,64,52,43,127],u:'ng/mL',lo:13,hi:150,inv:false}}}};
+
+// ID da planilha Google Sheets com os exames da Renata
+const SHEETS_ID='1osrv5jJV75R4Sog0QUCVJkN3SPGjdxDWTu8jSbLJhI8';
+
+// Mapeamento de secoes da planilha para grupos do app
+const SECTION_MAP={
+  'HEMOGRAMA':'Sangue & Metabolismo','LIPIDIOS':'Sangue & Metabolismo',
+  'GLICEMIA':'Sangue & Metabolismo','FIGADO':'Sangue & Metabolismo',
+  'TIREOIDE':'Tireoide & Hormonios','HORMONIOS':'Tireoide & Hormonios',
+  'VITAMINAS':'Vitaminas & Nutrientes'
+};
+// Marcadores com logica invertida (maior = melhor)
+const INV_MARKERS=['HDL','Acido Folico','Vitamina B12','Vitamina D'];
+
+// Dados base (fallback enquanto nao sincroniza)
+const RENATA_EXAMS_BASE={dates:['Nov/24','Fev/25','Mai/25','Jul/25','Set/25','Dez/25'],groups:{'Sangue & Metabolismo':{'Hemoglobina':{v:[11.9,12.7,12.5,12.6,12.4,13.1],u:'g/dL',lo:12,hi:15,inv:false},'Colesterol Total':{v:[131,162,148,131,134,128],u:'mg/dL',lo:null,hi:190,inv:false},'HDL':{v:[38,45,32,32,31,31],u:'mg/dL',lo:40,hi:null,inv:true},'LDL':{v:[75,95,103,82,91,84],u:'mg/dL',lo:null,hi:130,inv:false},'Glicose':{v:[95,100,82,80,76,77],u:'mg/dL',lo:60,hi:99,inv:false},'HbA1c':{v:[5.6,5.8,5.4,5.1,5.2,5.0],u:'%',lo:null,hi:5.7,inv:false},'Insulina':{v:[null,null,13.5,23.2,9.8,8.1],u:'uUI/mL',lo:3,hi:25,inv:false},'Acido Urico':{v:[7.3,5.8,5.2,5.0,4.4,4.6],u:'mg/dL',lo:1.5,hi:6.0,inv:false},'PCR':{v:[7.3,null,7.04,3.90,4.86,4.81],u:'mg/L',lo:null,hi:1.0,inv:false}},'Tireoide & Hormonios':{'TSH':{v:[null,1.64,0.80,0.90,0.87,1.65],u:'uUI/mL',lo:0.38,hi:5.33,inv:false},'T4 Livre':{v:[null,0.81,0.96,0.92,1.19,1.03],u:'ng/dL',lo:0.54,hi:1.24,inv:false},'Estradiol':{v:[null,null,81,160,27,33],u:'pg/mL',lo:null,hi:null,inv:false},'SHBG':{v:[null,null,29.8,23.4,17,13.5],u:'nmol/L',lo:10.8,hi:180,inv:false},'DHEA-S':{v:[null,null,108,94,136,125],u:'mcg/dL',lo:23,hi:266,inv:false},'Homocisteina':{v:[null,null,14.71,14.36,13.82,16.68],u:'umol/L',lo:5.2,hi:12.7,inv:false}},'Vitaminas & Nutrientes':{'Vitamina D':{v:[null,63.4,46.7,75,74,59],u:'ng/mL',lo:20,hi:60,inv:false},'Vitamina B12':{v:[null,447,509,650,473,535],u:'pg/mL',lo:211,hi:911,inv:false},'Acido Folico':{v:[null,null,9.9,13.66,17.53,24],u:'ng/mL',lo:5.38,hi:null,inv:true},'Ferritina':{v:[null,39,64,52,43,127],u:'ng/mL',lo:13,hi:150,inv:false}}}};
+
+// Dados vivos — atualizados pelo sync
+let RENATA_EXAMS = JSON.parse(JSON.stringify(RENATA_EXAMS_BASE));
+
+// ─── SYNC COM GOOGLE SHEETS ──────────────────────────────
+function parseNum(s){
+  if(!s||s.trim()===''||s==='—'||s==='-')return null;
+  // remove prefixos como ">24", "<0,1"
+  const clean=s.replace(/[<>≤≥]/g,'').replace(',','.').trim();
+  const n=parseFloat(clean);
+  return isNaN(n)?null:n;
+}
+function parseRef(s){
+  if(!s||s==='—')return{lo:null,hi:null};
+  // "3,8–4,8" ou "3.8-4.8"
+  const m=s.replace(',','.').match(/([0-9.]+)\s*[–\-]\s*([0-9.]+)/);
+  if(m)return{lo:parseFloat(m[1]),hi:parseFloat(m[2])};
+  // "< 190" ou "≤ 1,20"
+  const ltm=s.replace(',','.').match(/[<≤]\s*([0-9.]+)/);
+  if(ltm)return{lo:null,hi:parseFloat(ltm[1])};
+  // "> 40"
+  const gtm=s.replace(',','.').match(/[>≥]\s*([0-9.]+)/);
+  if(gtm)return{lo:parseFloat(gtm[1]),hi:null};
+  return{lo:null,hi:null};
+}
+function normalizeKey(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();}
+
+async function syncExams(manual=false){
+  if(!accessToken){if(manual)showToast('Conecte o Drive primeiro');return;}
+  const bar=document.getElementById('sync-bar');
+  const status=document.getElementById('sync-status');
+  if(bar)bar.classList.remove('hidden');
+  if(status)status.innerHTML='<span class="spinning">&#8635;</span> Sincronizando...';
+  try{
+    const res=await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/A:Z`,
+      {headers:{Authorization:'Bearer '+accessToken}}
+    );
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const rows=data.values;
+    if(!rows||rows.length<3)throw new Error('Planilha vazia');
+
+    // Encontra linha do cabecalho (tem "Marcador")
+    let hIdx=-1;
+    for(let i=0;i<rows.length;i++){if(rows[i]&&rows[i][0]==='Marcador'){hIdx=i;break;}}
+    if(hIdx<0)throw new Error('Cabecalho nao encontrado');
+
+    const dates=rows[hIdx].slice(3).filter(d=>d&&d.trim());
+    const newGroups={'Sangue & Metabolismo':{},'Tireoide & Hormonios':{},'Vitaminas & Nutrientes':{}};
+    let currentGroup='Sangue & Metabolismo';
+
+    for(let i=hIdx+1;i<rows.length;i++){
+      const row=rows[i];
+      if(!row||!row[0])continue;
+      const cell0=row[0].trim();
+      if(!cell0)continue;
+
+      // Detecta cabecalho de secao (linha sem unidade e sem valores numericos)
+      const norm=normalizeKey(cell0).toUpperCase();
+      let matched=false;
+      for(const[key,grp]of Object.entries(SECTION_MAP)){
+        if(norm.includes(key)){currentGroup=grp;matched=true;break;}
+      }
+      if(matched)continue;
+      // Pula linhas de legenda/aviso
+      if(norm.startsWith('LEGENDA')||norm.startsWith('ESTE DOC')||norm.startsWith('⚠'))continue;
+
+      const unit=row[1]||'';
+      const refStr=row[2]||'';
+      const values=row.slice(3,3+dates.length).map(parseNum);
+      if(values.every(v=>v===null))continue; // sem dados
+
+      const{lo,hi}=parseRef(refStr);
+      const isInv=INV_MARKERS.some(m=>normalizeKey(cell0).includes(normalizeKey(m)));
+      newGroups[currentGroup][cell0]={v:values,u:unit,lo,hi,inv:isInv};
+    }
+
+    // Atualiza dados vivos
+    RENATA_EXAMS={dates,groups:newGroups};
+
+    // Salva cache local
+    const now=new Date();
+    const ts=MONTHS[now.getMonth()]+'/'+String(now.getFullYear()).slice(2)+' '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+    localStorage.setItem('exams_cache',JSON.stringify(RENATA_EXAMS));
+    localStorage.setItem('exams_sync_ts',ts);
+    if(status)status.innerHTML='&#128197; Sincronizado: '+ts;
+    if(manual)showToast('Exames atualizados!',2500);
+
+    // Recarrega tela atual
+    const p=getProfile(activeProfileId);
+    if(p&&p.nome.split(' ')[0]==='Renata'){
+      if(currentNav==='home')renderHome();
+      else if(currentNav==='metas')renderMetas();
+    }
+  }catch(e){
+    console.error('Sync error:',e);
+    if(status)status.innerHTML='&#9888;&#65039; Erro ao sincronizar';
+    if(manual)showToast('Erro: '+e.message,3000);
+    // Tenta usar cache local
+    const cached=localStorage.getItem('exams_cache');
+    if(cached)try{RENATA_EXAMS=JSON.parse(cached);}catch(e2){}
+  }
+}
+
+function loadCachedExams(){
+  const cached=localStorage.getItem('exams_cache');
+  const ts=localStorage.getItem('exams_sync_ts');
+  if(cached){
+    try{RENATA_EXAMS=JSON.parse(cached);}catch(e){}
+    const bar=document.getElementById('sync-bar');
+    const status=document.getElementById('sync-status');
+    if(bar)bar.classList.remove('hidden');
+    if(status&&ts)status.textContent='&#128197; Sincronizado: '+ts;
+  }
+}
 
 let db={profiles:[],docs:[]};
 let accessToken=null,tokenExpiry=0,activeProfileId=null,filterCat='all';
@@ -382,20 +559,32 @@ function closePage(pid){
   if(prev)navTo(prev);else navTo('home');
 }
 
-function connectDrive(){
+function connectDriveFirstTime(){
   const cid=document.getElementById('client-id-input').value.trim();
   if(!cid){showToast('Cole seu Client ID primeiro');return;}
   localStorage.setItem('drive_client_id',cid);
-  if(!window.google||!window.google.accounts||!window.google.accounts.oauth2){showToast('Abra via servidor local: python -m http.server',4000);return;}
+  connectDrive();
+}
+function connectDrive(){
+  const cid=localStorage.getItem('drive_client_id');
+  if(!cid){showDriveState('setup');showToast('Configure o Client ID primeiro');return;}
+  if(!window.google||!window.google.accounts||!window.google.accounts.oauth2){showToast('Google API carregando, tente novamente',3000);return;}
   tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly',callback:(resp)=>{
     if(resp.error){showToast('Erro: '+resp.error,3000);return;}
     accessToken=resp.access_token;tokenExpiry=Date.now()+(resp.expires_in*1000);
     localStorage.setItem('drive_token',accessToken);localStorage.setItem('drive_expiry',String(tokenExpiry));
     updateDriveUI(true);showToast('Drive conectado!',2500);closePage('page-drive-setup');renderHome();
+    setTimeout(()=>syncExams(false),800);
   }});
-  tokenClient.requestAccessToken({prompt:'consent'});
+  tokenClient.requestAccessToken({prompt:'select_account'});
 }
-function disconnectDrive(){accessToken=null;tokenExpiry=0;localStorage.removeItem('drive_token');localStorage.removeItem('drive_expiry');updateDriveUI(false);showToast('Drive desconectado');renderPerfil();}
+function disconnectDrive(){accessToken=null;tokenExpiry=0;localStorage.removeItem('drive_token');localStorage.removeItem('drive_expiry');updateDriveUI(false);showToast('Drive desconectado');showDriveState(localStorage.getItem('drive_client_id')?'saved':'setup');renderPerfil();}
+function showClientIdForm(){showDriveState('setup');}
+function showDriveState(state){
+  document.getElementById('drive-state-connected').classList.toggle('hidden',state!=='connected');
+  document.getElementById('drive-state-saved').classList.toggle('hidden',state!=='saved');
+  document.getElementById('drive-state-setup').classList.toggle('hidden',state!=='setup');
+}
 function updateDriveUI(c){
   const dot=document.getElementById('drive-dot'),txt=document.getElementById('drive-bar-text'),btn=document.getElementById('drive-bar-btn');
   const info=document.getElementById('drive-upload-info'),disc=document.getElementById('btn-disconnect');
@@ -464,6 +653,9 @@ function renderHome(){
   const atDocs=docs.filter(d=>d.categoria==='atestado'),rxDocs=docs.filter(d=>d.categoria==='receita');
   const ed=first==='Renata'?RENATA_EXAMS:null;
   const hb=ed&&ed.groups['Sangue & Metabolismo']['Hemoglobina'],col=ed&&ed.groups['Sangue & Metabolismo']['Colesterol Total'];
+  // Mostra barra de sync se Drive conectado
+  const syncBar=document.getElementById('sync-bar');
+  if(syncBar) syncBar.classList.toggle('hidden',!accessToken||first!=='Renata');
   const lastHb=hb?[...hb.v].reverse().find(v=>v!==null):null,lastCol=col?[...col.v].reverse().find(v=>v!==null):null;
   const lastDate=ed?ed.dates[ed.dates.length-1]:(exDocs[0]&&exDocs[0].mesano?fmtMYD(exDocs[0].mesano):'--');
   const hbChart=hb?miniChart(hb.v,hb.lo,hb.hi):'';
@@ -541,7 +733,15 @@ function renderPerfil(){
   const c=!!accessToken;
   document.getElementById('perfil-content').innerHTML='<div class="perfil-section"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Membros da familia</div><div class="perfil-card">'+(db.profiles.length?db.profiles.map(p=>'<div class="perfil-row" onclick="openEditProfile(\''+p.id+'\')"><div class="perfil-av" style="background:'+p.cor+'">'+initials(p.nome)+'</div><div class="perfil-info"><div class="perfil-name">'+p.nome+'</div><div class="perfil-detail">'+(p.nascimento||'')+((p.nascimento&&p.sexo)?' - ':'')+({F:'Feminino',M:'Masculino',O:'Outro'}[p.sexo]||'')+'</div></div><div style="color:var(--light);font-size:18px">></div></div>').join(''):'<div style="color:var(--muted);font-size:13px;padding:10px 0">Nenhum perfil criado</div>')+'</div><button class="btn btn-outline" onclick="openAddProfile()">+ Adicionar membro</button><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:22px 0 10px">Google Drive</div><div class="perfil-card" style="padding:16px"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:30px">cloud</div><div style="flex:1"><div style="font-size:14px;font-weight:700">Google Drive</div><div style="font-size:12px;color:'+(c?'var(--green)':'var(--orange)')+';margin-top:2px">'+(c?'Conectado':'Nao conectado')+'</div></div><button class="btn" style="width:auto;padding:8px 14px;font-size:12px;margin:0" onclick="showDriveSetup()">'+(c?'Configurar':'Conectar')+'</button></div></div></div>';
 }
-function showDriveSetup(){document.getElementById('client-id-input').value=localStorage.getItem('drive_client_id')||'';updateDriveUI(!!accessToken);openPage('page-drive-setup');}
+function showDriveSetup(){
+  const hasCid=!!localStorage.getItem('drive_client_id');
+  const connected=!!accessToken;
+  if(connected) showDriveState('connected');
+  else if(hasCid) showDriveState('saved');
+  else{ showDriveState('setup'); document.getElementById('client-id-input').value=''; }
+  updateDriveUI(connected);
+  openPage('page-drive-setup');
+}
 
 function openAddDoc(){
   document.getElementById('doc-nome').value='';document.getElementById('doc-cat').value='exame';
@@ -594,7 +794,15 @@ function deleteProfile(){if(!confirm('Excluir perfil e todos os documentos?'))re
 
 (function createFab(){const fab=document.createElement('button');fab.id='fab-add';fab.style.cssText='position:fixed;bottom:74px;right:18px;width:52px;height:52px;border-radius:26px;background:var(--teal);color:#fff;font-size:28px;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(26,158,143,.4);cursor:pointer;z-index:90;line-height:1';fab.textContent='+';fab.onclick=()=>openAddDoc();document.body.appendChild(fab);})();
 
-window.addEventListener('load',()=>{loadData();activeProfileId=db.profiles[0]&&db.profiles[0].id||null;renderColorDots();renderHome();});
+window.addEventListener('load',()=>{
+  loadData();
+  loadCachedExams();
+  activeProfileId=db.profiles[0]&&db.profiles[0].id||null;
+  renderColorDots();
+  renderHome();
+  // Se ja tem token valido, sincroniza automaticamente
+  if(accessToken) setTimeout(()=>syncExams(false),1200);
+});
 </script>
 </body>
 </html>
