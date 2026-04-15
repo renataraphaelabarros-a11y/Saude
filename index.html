@@ -382,7 +382,7 @@ const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov',
 const KNOWN_FOLDERS={'Renata':'1ImeAne1bS1lA3ZR4j4neNzJ-jrdoOd0A','Jamerson':'1e9COIjqOgCV5W0D0z_ZWkETaXCipc27z','Pedro':'1RpoHBOsCBS2Ig0NhptUcmSlMgeruZ2iD'};
 
 // ID da planilha Google Sheets com os exames da Renata
-const SHEETS_ID='1osrv5jJV75R4Sog0QUCVJkN3SPGjdxDWTu8jSbLJhI8';
+const SHEETS_ID='1fJv6Xbnt0HX92zb16HPnQ-mIgE4XYbeoAB2Cbz0jz_4';
 
 // Mapeamento de secoes da planilha para grupos do app
 const SECTION_MAP={
@@ -395,7 +395,49 @@ const SECTION_MAP={
 const INV_MARKERS=['HDL','Acido Folico','Vitamina B12','Vitamina D'];
 
 // Dados base (fallback enquanto nao sincroniza)
-const RENATA_EXAMS_BASE={dates:['Nov/24','Fev/25','Mai/25','Jul/25','Set/25','Dez/25'],groups:{'Sangue & Metabolismo':{'Hemoglobina':{v:[11.9,12.7,12.5,12.6,12.4,13.1],u:'g/dL',lo:12,hi:15,inv:false},'Colesterol Total':{v:[131,162,148,131,134,128],u:'mg/dL',lo:null,hi:190,inv:false},'HDL':{v:[38,45,32,32,31,31],u:'mg/dL',lo:40,hi:null,inv:true},'LDL':{v:[75,95,103,82,91,84],u:'mg/dL',lo:null,hi:130,inv:false},'Glicose':{v:[95,100,82,80,76,77],u:'mg/dL',lo:60,hi:99,inv:false},'HbA1c':{v:[5.6,5.8,5.4,5.1,5.2,5.0],u:'%',lo:null,hi:5.7,inv:false},'Insulina':{v:[null,null,13.5,23.2,9.8,8.1],u:'uUI/mL',lo:3,hi:25,inv:false},'Acido Urico':{v:[7.3,5.8,5.2,5.0,4.4,4.6],u:'mg/dL',lo:1.5,hi:6.0,inv:false},'PCR':{v:[7.3,null,7.04,3.90,4.86,4.81],u:'mg/L',lo:null,hi:1.0,inv:false}},'Tireoide & Hormonios':{'TSH':{v:[null,1.64,0.80,0.90,0.87,1.65],u:'uUI/mL',lo:0.38,hi:5.33,inv:false},'T4 Livre':{v:[null,0.81,0.96,0.92,1.19,1.03],u:'ng/dL',lo:0.54,hi:1.24,inv:false},'Estradiol':{v:[null,null,81,160,27,33],u:'pg/mL',lo:null,hi:null,inv:false},'SHBG':{v:[null,null,29.8,23.4,17,13.5],u:'nmol/L',lo:10.8,hi:180,inv:false},'DHEA-S':{v:[null,null,108,94,136,125],u:'mcg/dL',lo:23,hi:266,inv:false},'Homocisteina':{v:[null,null,14.71,14.36,13.82,16.68],u:'umol/L',lo:5.2,hi:12.7,inv:false}},'Vitaminas & Nutrientes':{'Vitamina D':{v:[null,63.4,46.7,75,74,59],u:'ng/mL',lo:20,hi:60,inv:false},'Vitamina B12':{v:[null,447,509,650,473,535],u:'pg/mL',lo:211,hi:911,inv:false},'Acido Folico':{v:[null,null,9.9,13.66,17.53,24],u:'ng/mL',lo:5.38,hi:null,inv:true},'Ferritina':{v:[null,39,64,52,43,127],u:'ng/mL',lo:13,hi:150,inv:false}}}};
+const RENATA_EXAMS_BASE={
+  dates:['Nov/24','Fev/25','Mar/25','Mai/25','Jul/25','Set/25','Dez/25'],
+  groups:{
+    'Sangue & Metabolismo':{
+      'Hemoglobina':      {v:[11.9,12.7,11.6,12.5,12.6,12.4,13.1],u:'g/dL',  lo:12,   hi:15,   inv:false},
+      'Colesterol Total': {v:[131,162,155,148,131,134,128],        u:'mg/dL', lo:null, hi:190,  inv:false},
+      'HDL':              {v:[38,45,37,32,32,31,31],               u:'mg/dL', lo:40,   hi:null, inv:true},
+      'LDL':              {v:[75,95,105,103,82,91,84],             u:'mg/dL', lo:null, hi:130,  inv:false},
+      'VLDL':             {v:[18,22,13,13,17,12,13],               u:'mg/dL', lo:null, hi:30,   inv:false},
+      'Triglicerideos':   {v:[88,108,63,64,90,41,45],              u:'mg/dL', lo:null, hi:150,  inv:false},
+      'Apolipoproteina A1':{v:[null,null,103,96,86,81,85],         u:'mg/dL', lo:76,   hi:214,  inv:true},
+      'Apolipoproteina B':{v:[null,null,67,71,64,71,59],           u:'mg/dL', lo:null, hi:100,  inv:false},
+      'Glicose':          {v:[95,100,103,82,80,76,77],             u:'mg/dL', lo:60,   hi:99,   inv:false},
+      'HbA1c':            {v:[5.6,5.8,null,5.4,5.1,5.2,5.0],      u:'%',     lo:null, hi:5.7,  inv:false},
+      'Insulina':         {v:[null,null,28.3,13.5,23.2,9.8,8.1],   u:'uUI/mL',lo:3,    hi:25,   inv:false},
+      'Acido Urico':      {v:[7.3,5.8,6.7,5.2,5.0,4.4,4.6],       u:'mg/dL', lo:1.5,  hi:6.0,  inv:false},
+      'PCR':              {v:[7.3,null,6.6,7.04,3.90,4.86,4.81],   u:'mg/L',  lo:null, hi:1.0,  inv:false},
+      'ALT/TGP':          {v:[22,23,15,15,15,15,12],               u:'U/L',   lo:null, hi:37,   inv:false},
+      'AST/TGO':          {v:[33,25,19,21,17,18,16],               u:'U/L',   lo:null, hi:37,   inv:false},
+      'Gama-GT':          {v:[null,19,14,16,16,14,16],             u:'U/L',   lo:null, hi:39,   inv:false},
+      'CA 125':           {v:[null,null,22.6,30.6,21.5,16.8,21.7], u:'U/mL',  lo:null, hi:35,   inv:false},
+    },
+    'Tireoide & Hormonios':{
+      'TSH':              {v:[null,1.64,1.43,0.80,0.90,0.87,1.65], u:'uUI/mL',lo:0.38, hi:5.33, inv:false},
+      'T4 Livre':         {v:[null,0.81,0.87,0.96,0.92,1.19,1.03], u:'ng/dL', lo:0.54, hi:1.24, inv:false},
+      'Estradiol':        {v:[null,null,43,81,160,27,33],           u:'pg/mL', lo:null, hi:null, inv:false},
+      'FSH':              {v:[null,null,3.70,5.20,4.18,3.79,4.00], u:'mUI/mL',lo:null, hi:null, inv:false},
+      'LH':               {v:[null,null,3.29,2.82,7.24,4.08,1.01], u:'mUI/mL',lo:null, hi:null, inv:false},
+      'Testosterona Total':{v:[null,null,16,20,22,21,18],           u:'ng/dL', lo:12,   hi:59,   inv:false},
+      'Testosterona Livre':{v:[null,null,0.29,0.38,0.48,0.53,0.50],u:'ng/dL', lo:0.08, hi:1.11, inv:false},
+      'SHBG':             {v:[null,null,32.2,29.8,23.4,17,13.5],   u:'nmol/L',lo:10.8, hi:180,  inv:false},
+      'DHEA-S':           {v:[null,null,null,108,94,136,125],       u:'mcg/dL',lo:23,   hi:266,  inv:false},
+      'Homocisteina':     {v:[null,null,15.43,14.71,14.36,13.82,16.68],u:'umol/L',lo:5.2,hi:12.7,inv:false},
+      'PTH':              {v:[null,null,40.3,null,18,38,15],        u:'pg/mL', lo:12,   hi:88,   inv:false},
+    },
+    'Vitaminas & Nutrientes':{
+      'Vitamina D':       {v:[null,63.4,44.1,46.7,75,74,59],       u:'ng/mL', lo:20,   hi:60,   inv:false},
+      'Vitamina B12':     {v:[null,447,387,509,650,473,535],        u:'pg/mL', lo:211,  hi:911,  inv:false},
+      'Acido Folico':     {v:[null,null,11.0,9.9,13.66,17.53,24],  u:'ng/mL', lo:5.38, hi:null, inv:true},
+      'Ferritina':        {v:[null,39,68,64,52,43,127],             u:'ng/mL', lo:13,   hi:150,  inv:false},
+    }
+  }
+}
 
 // Dados vivos — atualizados pelo sync
 let RENATA_EXAMS = JSON.parse(JSON.stringify(RENATA_EXAMS_BASE));
@@ -699,17 +741,60 @@ function renderExamCards(ed){
   document.getElementById('exam-chart-content').innerHTML=html||'<div class="empty"><div class="empty-text">Sem dados</div></div>';
 }
 
+// Cache de arquivos do Drive no historico
+let cachedDriveFiles=[];
+async function fetchDriveFiles(folderId){
+  if(!accessToken||!folderId)return[];
+  try{
+    const q=encodeURIComponent("'"+folderId+"' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false");
+    const res=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name,mimeType,createdTime,modifiedTime,webViewLink)&orderBy=createdTime+desc&pageSize=50',{headers:{Authorization:'Bearer '+accessToken}});
+    const data=await res.json();
+    return data.files||[];
+  }catch(e){return[];}
+}
+function fmtDriveDate(iso){
+  if(!iso)return'';
+  const d=new Date(iso);
+  return MONTHS[d.getMonth()]+'/'+String(d.getFullYear()).slice(2);
+}
+function driveFileIcon(mime){
+  if(mime==='application/pdf')return'PDF';
+  if(mime.startsWith('image/'))return'IMG';
+  if(mime.includes('spreadsheet')||mime.includes('excel'))return'XLS';
+  if(mime.includes('document')||mime.includes('word'))return'DOC';
+  return'ARQ';
+}
+
 function renderHistory(){
   const p=getProfile(activeProfileId);const docs=p?profileDocs(p.id):[];
   const filtered=filterCat==='all'?docs:docs.filter(d=>d.categoria===filterCat);
   const sorted=[...filtered].sort((a,b)=>(b.mesano||'').localeCompare(a.mesano||''));
-  document.getElementById('hist-filter').innerHTML='<button class="fchip'+(filterCat==='all'?' active':'')+'" onclick="setFilter(\'all\')">Todos ('+docs.length+')</button>'+Object.entries(CATS).map(([k,v])=>'<button class="fchip'+(filterCat===k?' active':'')+'" onclick="setFilter(\''+k+'\')">'+v.label+'</button>').join('');
+  document.getElementById('hist-filter').innerHTML='<button class="fchip'+(filterCat==='all'?' active':'')+'" onclick="setFilter(\'all\')">App ('+docs.length+')</button>'+Object.entries(CATS).map(([k,v])=>'<button class="fchip'+(filterCat===k?' active':'')+'" onclick="setFilter(\''+k+'\')">'+v.label+'</button>').join('');
   const list=document.getElementById('hist-list');
   if(!p){list.innerHTML='<div class="empty"><div class="empty-text">Selecione um perfil</div></div>';return;}
-  if(!sorted.length){list.innerHTML='<div class="empty"><div class="empty-icon">pasta</div><div class="empty-text">Nenhum documento</div><div class="empty-sub">Toque em + para adicionar</div></div>';return;}
-  list.innerHTML=sorted.map(d=>{const c=CATS[d.categoria]||CATS.outro;return'<div class="doc-item" onclick="openDocDetail(\''+d.id+'\')"><div class="doc-icon-box" style="background:'+c.bg+'">doc</div><div style="flex:1;min-width:0"><div class="doc-name">'+d.nome+'</div><div class="doc-meta">'+c.label+(d.mesano?' - '+fmtMYD(d.mesano):'')+'</div></div><div class="doc-arrow">></div></div>';}).join('');
+
+  // Secao: arquivos do Drive
+  let driveSection='';
+  if(accessToken&&p.driveFolder){
+    const driveFiles=cachedDriveFiles;
+    const driveItems=driveFiles.length
+      ?driveFiles.map(f=>{
+          const icon=driveFileIcon(f.mimeType);
+          const date=fmtDriveDate(f.createdTime);
+          return'<a href="'+f.webViewLink+'" target="_blank" style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:11px 14px;margin-bottom:10px;box-shadow:var(--shadow);text-decoration:none;color:inherit"><div style="width:44px;height:44px;border-radius:12px;background:#e8f0fe;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#1a73e8;flex-shrink:0">'+icon+'</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+f.name+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Drive'+( date?' - '+date:'')+'</div></div><div style="color:#1a73e8;font-size:12px;font-weight:700">abrir</div></a>';
+        }).join('')
+      :'<div style="font-size:12px;color:var(--muted);padding:10px 0">Carregando arquivos do Drive...</div>';
+    driveSection='<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:14px 0 8px">Arquivos no Drive ('+driveFiles.length+')</div>'+driveItems+'<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:14px 0 8px">Adicionados pelo App ('+docs.length+')</div>';
+    // Busca arquivos se nao tiver cache
+    if(!driveFiles.length){
+      fetchDriveFiles(p.driveFolder).then(files=>{cachedDriveFiles=files;renderHistory();});
+    }
+  }
+
+  if(!sorted.length&&!driveSection){list.innerHTML='<div class="empty"><div class="empty-text">Nenhum documento</div><div class="empty-sub">Toque em + para adicionar</div></div>';return;}
+  list.innerHTML=driveSection+sorted.map(d=>{const c=CATS[d.categoria]||CATS.outro;return'<div class="doc-item" onclick="openDocDetail(\''+d.id+'\')"><div class="doc-icon-box" style="background:'+c.bg+'">'+c.icon+'</div><div style="flex:1;min-width:0"><div class="doc-name">'+d.nome+'</div><div class="doc-meta">'+c.label+(d.mesano?' - '+fmtMYD(d.mesano):'')+'</div></div><div class="doc-arrow">></div></div>';}).join('');
 }
-function setFilter(cat){filterCat=cat;renderHistory();}
+function setFilter(cat){filterCat=cat;cachedDriveFiles=[];renderHistory();}
 
 function renderMetas(){
   const p=getProfile(activeProfileId);const first=p&&p.nome.split(' ')[0];
