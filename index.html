@@ -4,527 +4,597 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Prontuário de Saúde</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  :root {
-    --bg:      #f0f4f8;
-    --surface: #ffffff;
-    --border:  #e2e8f0;
-    --text:    #1a202c;
-    --muted:   #718096;
-    --light:   #a0aec0;
-    --accent:  #2b6cb0;
-    --accent2: #3182ce;
-    --green:   #38a169;
-    --red:     #c53030;
-    --shadow:  0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
-    --radius:  14px;
-    --font:    Georgia, 'Times New Roman', serif;
-  }
-  body { background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; max-width:480px; margin:0 auto; }
-
-  .header { padding:18px 18px 12px; border-bottom:1px solid var(--border); background:var(--surface); position:sticky; top:0; z-index:10; box-shadow:0 1px 0 var(--border); }
-  .logo { font-size:10px; letter-spacing:4px; color:var(--light); text-transform:uppercase; }
-  .header h1 { font-size:20px; color:var(--text); margin-top:2px; }
-  .saving-msg { font-size:11px; color:var(--green); margin-top:3px; }
-
-  .drive-bar { display:flex; gap:8px; padding:9px 16px; border-bottom:1px solid var(--border); background:#ebf8ff; align-items:center; }
-  .drive-status { font-size:12px; color:#2c5282; flex:1; }
-  .drive-btn { font-size:12px; font-family:var(--font); padding:6px 12px; border-radius:8px; cursor:pointer; border:none; background:var(--accent); color:#fff; }
-
-  .profile-bar { display:flex; gap:10px; padding:13px 16px; overflow-x:auto; background:var(--surface); border-bottom:1px solid var(--border); scrollbar-width:none; }
-  .profile-bar::-webkit-scrollbar { display:none; }
-  .avatar { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:bold; color:#fff; cursor:pointer; flex-shrink:0; border:3px solid transparent; transition:border .2s, box-shadow .2s; user-select:none; }
-  .avatar.active { border-color:var(--accent); box-shadow:0 0 0 2px #bee3f8; }
-  .add-avatar { width:46px; height:46px; border-radius:50%; background:var(--bg); border:2px dashed var(--border); color:var(--light); font-size:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
-
-  .body { padding:0 16px 100px; }
-  .section-title { font-size:10px; letter-spacing:3px; color:var(--light); text-transform:uppercase; margin:20px 0 10px; }
-
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-top:14px; box-shadow:var(--shadow); }
-  .profile-card-top { display:flex; align-items:center; gap:14px; }
-  .profile-name { font-size:18px; font-weight:bold; }
-  .profile-info { font-size:12px; color:var(--muted); margin-top:3px; }
-  .edit-btn { background:none; border:none; color:var(--light); font-size:18px; cursor:pointer; margin-left:auto; padding:4px; }
-
-  .stats-row { display:flex; gap:6px; margin-top:14px; }
-  .stat { text-align:center; flex:1; background:var(--bg); border-radius:10px; padding:8px 4px; }
-  .stat-icon { font-size:16px; }
-  .stat-num { font-size:16px; font-weight:bold; margin-top:2px; }
-  .stat-label { font-size:9px; color:var(--muted); margin-top:1px; }
-
-  .btn { display:block; width:100%; padding:13px 18px; border-radius:11px; border:none; font-family:var(--font); font-size:15px; cursor:pointer; color:#fff; background:var(--accent); margin-top:10px; text-align:center; transition:opacity .15s; box-shadow:0 2px 6px rgba(43,108,176,.2); }
-  .btn:active { opacity:.85; }
-  .btn-green { background:var(--green); box-shadow:0 2px 6px rgba(56,161,105,.2); }
-  .btn-outline { background:var(--surface); border:1px solid var(--border); color:var(--muted); box-shadow:none; }
-  .btn-red { background:var(--surface); border:1px solid #feb2b2; color:var(--red); box-shadow:none; }
-
-  .label { font-size:13px; color:var(--muted); margin-top:14px; display:block; font-weight:bold; }
-  input, select, textarea { display:block; width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:11px; color:var(--text); font-family:var(--font); font-size:15px; padding:12px 14px; margin-top:6px; outline:none; -webkit-appearance:none; appearance:none; box-shadow:0 1px 2px rgba(0,0,0,.04); }
-  input:focus, select:focus, textarea:focus { border-color:var(--accent2); box-shadow:0 0 0 3px #bee3f8; }
-  textarea { height:80px; resize:vertical; }
-  select option { background:#fff; color:var(--text); }
-
-  .color-dots { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  .color-dot { width:30px; height:30px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:border .15s; }
-  .color-dot.selected { border-color:var(--accent); box-shadow:0 0 0 2px #bee3f8; }
-
-  .back-btn { background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; padding:2px 0; }
-  .page-title { font-size:20px; margin-top:10px; }
-
-  .doc-item { display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; cursor:pointer; box-shadow:var(--shadow); transition:box-shadow .15s; }
-  .doc-item:active { box-shadow:none; }
-  .doc-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
-  .doc-name { font-size:15px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .doc-meta { font-size:12px; color:var(--muted); margin-top:2px; }
-
-  .filter-bar { display:flex; gap:6px; overflow-x:auto; padding:12px 0 4px; scrollbar-width:none; }
-  .filter-bar::-webkit-scrollbar { display:none; }
-  .filter-btn { padding:7px 14px; border-radius:20px; font-size:12px; font-family:var(--font); border:1.5px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; white-space:nowrap; transition:all .15s; }
-  .filter-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 2px 6px rgba(43,108,176,.2); }
-
-  .upload-box { background:var(--bg); border:2px dashed var(--border); border-radius:var(--radius); padding:22px; text-align:center; cursor:pointer; margin-top:8px; transition:border-color .15s; }
-  .upload-box:hover { border-color:var(--accent2); }
-  .upload-box.has-file { border-color:var(--green); background:#f0fff4; }
-  .upload-text { color:var(--muted); font-size:14px; }
-  .upload-text.success { color:var(--green); font-weight:bold; }
-
-  .empty { text-align:center; padding:50px 20px; }
-  .empty-icon { font-size:48px; margin-bottom:14px; }
-  .empty-text { font-size:16px; color:var(--muted); }
-  .empty-sub { font-size:13px; color:var(--light); margin-top:6px; }
-
-  .profile-preview { display:flex; align-items:center; gap:12px; background:var(--bg); border-radius:12px; padding:12px 14px; margin-top:16px; }
-
-  .info-box { background:#ebf8ff; border:1px solid #bee3f8; border-radius:12px; padding:14px; margin:14px 0; }
-  .info-box-title { font-size:13px; font-weight:bold; color:#2c5282; margin-bottom:8px; }
-  .info-box-body { font-size:13px; color:#2c5282; line-height:1.8; }
-  code { background:#e2e8f0; padding:2px 6px; border-radius:4px; font-size:12px; color:var(--accent); }
-
-  .hidden { display:none !important; }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#eaf4fb;--surface:#fff;--border:#d0e8f5;
+  --teal:#1a9e8f;--teal2:#16877a;--teal-light:#e0f5f2;
+  --text:#1a2940;--muted:#5a7a8a;--light:#a0b8c8;
+  --green:#27ae60;--green-bg:#d4f5e9;--green-text:#1a6640;
+  --red:#e74c3c;--red-bg:#fdd;--red-text:#a01010;
+  --orange:#e67e22;--orange-bg:#fde8cc;--orange-text:#a05a10;
+  --shadow:0 2px 12px rgba(26,158,143,.08),0 1px 3px rgba(0,0,0,.05);
+  --radius:16px;--nav-h:64px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;max-width:480px;margin:0 auto;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px))}
+.hidden{display:none!important}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--nav-h);background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:stretch;box-shadow:0 -2px 16px rgba(0,0,0,.07);padding-bottom:env(safe-area-inset-bottom,0px);z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--light);font-size:10px;font-weight:600;transition:color .15s;border:none;background:none}
+.nav-item.active{color:var(--teal)}
+.nav-icon{font-size:22px;line-height:1}
+.page{display:none;min-height:100vh}
+.page.active{display:block}
+.page-header{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.back-btn{font-size:22px;cursor:pointer;color:var(--muted);background:none;border:none;padding:2px 6px 2px 0;flex-shrink:0}
+.page-title{font-size:18px;font-weight:700;flex:1}
+.home-header{background:linear-gradient(135deg,#dff0fb 0%,#c8e8f7 60%,#b8e0f0 100%);padding:20px 18px 16px;position:relative;overflow:hidden;min-height:100px}
+.home-greeting{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+.home-name{font-size:24px;font-weight:800;color:var(--text);margin-top:2px}
+.home-sub{font-size:13px;color:var(--muted);margin-top:3px}
+.home-illustration{position:absolute;right:10px;top:8px;font-size:64px;opacity:.75;user-select:none;pointer-events:none}
+.profile-chips{display:flex;gap:8px;padding:10px 14px;overflow-x:auto;scrollbar-width:none;background:var(--bg);border-bottom:1px solid var(--border)}
+.profile-chips::-webkit-scrollbar{display:none}
+.chip{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;background:var(--surface);border:1.5px solid var(--border);border-radius:20px;cursor:pointer;flex-shrink:0;transition:all .15s;font-size:13px;color:var(--muted)}
+.chip.active{background:var(--teal);border-color:var(--teal);color:#fff}
+.chip-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0}
+.chip-add{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--light);font-size:22px;cursor:pointer;flex-shrink:0}
+.drive-bar{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.drive-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.drive-dot.on{background:var(--green)}
+.drive-dot.off{background:var(--orange)}
+.drive-bar-text{flex:1;color:var(--muted)}
+.drive-bar-btn{padding:5px 12px;border-radius:8px;background:var(--teal);color:#fff;border:none;font-size:11px;font-weight:600;cursor:pointer}
+.cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 14px 4px}
+.dcard{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .15s}
+.dcard:active{transform:scale(.98)}
+.dcard-head{display:flex;align-items:center;gap:7px;padding:11px 12px 8px;border-bottom:1px solid var(--border)}
+.dcard-icon{font-size:18px;line-height:1}
+.dcard-title{font-size:12px;font-weight:700;color:var(--text)}
+.dcard-body{padding:9px 12px;flex:1}
+.dcard-date{font-size:10px;color:var(--muted);margin-bottom:5px}
+.dcard-metric{font-size:11px;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin:5px 0 3px}
+.badge-green{background:var(--green-bg);color:var(--green-text)}
+.badge-orange{background:var(--orange-bg);color:var(--orange-text)}
+.badge-red{background:var(--red-bg);color:var(--red-text)}
+.dcard-chart{margin:2px 0 6px;height:44px}
+.dcard-btn{padding:8px 12px;background:var(--teal);color:#fff;font-size:10px;font-weight:700;text-align:center;letter-spacing:.3px;border-radius:0 0 var(--radius) var(--radius);margin-top:auto}
+.dcard-list-item{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #f0f5f8;font-size:11px;color:var(--muted)}
+.dcard-list-item:last-child{border-bottom:none}
+.filter-bar{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;scrollbar-width:none;background:var(--bg);border-bottom:1px solid var(--border)}
+.filter-bar::-webkit-scrollbar{display:none}
+.fchip{padding:6px 14px;border-radius:16px;font-size:12px;font-weight:500;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.fchip.active{background:var(--teal);border-color:var(--teal);color:#fff}
+.doc-list{padding:12px 14px}
+.doc-item{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);cursor:pointer;transition:transform .15s}
+.doc-item:active{transform:scale(.99)}
+.doc-icon-box{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.doc-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.doc-arrow{color:var(--light);font-size:18px}
+.form-section{padding:14px}
+.fcard{background:var(--surface);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.flabel{font-size:11px;color:var(--muted);font-weight:700;margin-top:14px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.flabel:first-child{margin-top:0}
+input,select,textarea{display:block;width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:15px;padding:11px 14px;margin-top:6px;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);background:#fff}
+textarea{height:70px;resize:vertical}
+.btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;color:#fff;background:var(--teal);margin-top:10px;text-align:center;transition:opacity .15s}
+.btn:active{opacity:.85}
+.btn-outline{background:#fff;color:var(--teal);border:1.5px solid var(--teal)}
+.btn-red{background:#fff;color:var(--red);border:1.5px solid #ffcccc}
+.btn-grey{background:var(--bg);color:var(--muted);border:1.5px solid var(--border)}
+.upload-box{background:var(--bg);border:2px dashed var(--border);border-radius:12px;padding:20px;text-align:center;cursor:pointer;margin-top:8px;transition:all .15s}
+.upload-box:hover{border-color:var(--teal)}
+.upload-box.has-file{border-color:var(--green);background:#f0fff8}
+.upload-icon{font-size:28px;margin-bottom:6px}
+.upload-text{font-size:13px;color:var(--muted)}
+.upload-text.ok{color:var(--green);font-weight:700}
+.color-dots{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.cdot{width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s}
+.cdot.sel{border-color:var(--teal);box-shadow:0 0 0 2px #b2e8e2}
+.chart-container{padding:14px}
+.chart-card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.chart-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.chart-current{font-size:22px;font-weight:800;color:var(--teal);margin-top:8px}
+.chart-trend{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:12px;font-weight:600}
+.tab-bar{display:flex;gap:6px;padding:12px 14px;overflow-x:auto;scrollbar-width:none;background:var(--bg);border-bottom:1px solid var(--border)}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab{padding:6px 14px;border-radius:16px;font-size:12px;font-weight:500;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.tab.active{background:var(--teal);border-color:var(--teal);color:#fff}
+.meta-card{background:var(--surface);border-radius:var(--radius);padding:16px;margin:0 14px 12px;box-shadow:var(--shadow)}
+.meta-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.meta-name{font-size:14px;font-weight:700}
+.meta-bar-bg{background:var(--border);border-radius:4px;height:8px;overflow:hidden}
+.meta-bar-fill{height:8px;border-radius:4px;transition:width .5s}
+.meta-info{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:5px}
+.perfil-section{padding:14px}
+.perfil-card{background:var(--surface);border-radius:var(--radius);padding:4px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.perfil-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.perfil-row:last-child{border-bottom:none}
+.perfil-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;flex-shrink:0}
+.perfil-info{flex:1}
+.perfil-name{font-size:15px;font-weight:700}
+.perfil-detail{font-size:12px;color:var(--muted);margin-top:2px}
+.setup-card{background:linear-gradient(135deg,#e0f5f2,#d0eeff);border-radius:var(--radius);padding:20px;margin:14px;text-align:center}
+.setup-icon{font-size:44px;margin-bottom:10px}
+.setup-title{font-size:17px;font-weight:800;color:var(--teal);margin-bottom:6px}
+.setup-text{font-size:13px;color:var(--muted);line-height:1.6}
+.info-box{background:#fff8e1;border:1px solid #ffe082;border-radius:12px;padding:14px;margin:14px;font-size:12px;color:#7a5a00;line-height:1.7}
+.empty{text-align:center;padding:50px 20px}
+.empty-icon{font-size:52px;margin-bottom:14px}
+.empty-text{font-size:16px;color:var(--muted)}
+.empty-sub{font-size:13px;color:var(--light);margin-top:6px}
+.detail-body{padding:14px}
+.detail-card{background:var(--surface);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.detail-obs{font-size:14px;color:var(--muted);line-height:1.6}
+.drive-link{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--teal-light);border-radius:10px;margin-top:12px;font-size:13px;color:var(--teal);font-weight:600;border:1px solid #b2e0d8;text-decoration:none}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-10px);background:#1a2940;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.profile-preview{display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:12px;padding:12px 14px;margin-top:16px}
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 
 <!-- HOME -->
-<div id="view-home">
-  <div class="header">
-    <div class="logo">Prontuário Pessoal</div>
-    <h1>Saúde da Família</h1>
-    <div class="saving-msg hidden" id="saving-msg">✓ Salvo</div>
+<div class="page active" id="page-home">
+  <div class="home-header">
+    <div class="home-greeting">Prontuário Pessoal</div>
+    <div class="home-name" id="home-name">Saúde da Família</div>
+    <div class="home-sub" id="home-sub">Acompanhe sua saúde!</div>
+    <div class="home-illustration">❤️</div>
   </div>
-  <div class="drive-bar">
-    <div class="drive-status">📂 Dados salvos neste dispositivo</div>
-    <button class="drive-btn" onclick="showView('view-drive')">☁ Backup</button>
+  <div class="profile-chips" id="profile-chips"></div>
+  <div class="drive-bar" id="drive-bar">
+    <div class="drive-dot off" id="drive-dot"></div>
+    <div class="drive-bar-text" id="drive-bar-text">Dados salvos localmente</div>
+    <button class="drive-bar-btn" id="drive-bar-btn" onclick="navTo('perfil');showDriveSetup()">Conectar Drive</button>
   </div>
-  <div class="profile-bar" id="profile-bar"></div>
-  <div class="body" id="home-body"></div>
+  <div class="cards-grid" id="cards-grid"></div>
+  <div style="height:14px"></div>
 </div>
 
-<!-- DOCS -->
-<div id="view-docs" class="hidden">
-  <div class="header">
-    <button class="back-btn" onclick="showHome()">←</button>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-      <div class="avatar" id="docs-avatar" style="width:46px;height:46px;font-size:17px;border:none;flex-shrink:0"></div>
-      <div>
-        <div style="font-size:17px;font-weight:bold" id="docs-profile-name"></div>
-        <div style="font-size:12px;color:var(--muted)" id="docs-count"></div>
-      </div>
-    </div>
-    <div class="filter-bar" id="filter-bar"></div>
-  </div>
-  <div class="body">
-    <div id="docs-list"></div>
-    <button class="btn btn-green" onclick="showAddDoc()">+ Adicionar documento</button>
-  </div>
+<!-- HISTORICO -->
+<div class="page" id="page-historico">
+  <div class="page-header"><span class="page-title">Historico</span></div>
+  <div class="filter-bar" id="hist-filter"></div>
+  <div class="doc-list" id="hist-list"></div>
 </div>
 
-<!-- PROFILE FORM -->
-<div id="view-profile-form" class="hidden">
-  <div class="header">
-    <button class="back-btn" onclick="showHome()">←</button>
-    <div class="page-title" id="profile-form-title">Novo Perfil</div>
-  </div>
-  <div class="body" style="padding-top:14px">
-    <div class="card">
-      <label class="label" style="margin-top:0">Nome completo</label>
-      <input type="text" id="pf-nome" placeholder="Ex: Maria Silva" autocomplete="off">
-      <label class="label">Data de nascimento</label>
-      <input type="date" id="pf-nasc">
-      <label class="label">Sexo</label>
-      <select id="pf-sexo">
-        <option value="">Selecionar…</option>
-        <option value="F">Feminino</option>
-        <option value="M">Masculino</option>
-        <option value="O">Outro</option>
-      </select>
-      <label class="label">Cor do avatar</label>
-      <div class="color-dots" id="color-dots"></div>
-      <div class="profile-preview hidden" id="profile-preview-row">
-        <div class="avatar" id="profile-preview-avatar" style="border:none;width:46px;height:46px;font-size:17px;flex-shrink:0"></div>
-        <span id="profile-preview-name" style="font-size:16px;font-weight:bold"></span>
-      </div>
-    </div>
-    <button class="btn" onclick="saveProfile()" id="save-profile-btn">Criar perfil</button>
-    <button class="btn btn-red hidden" id="delete-profile-btn" onclick="deleteProfile()">🗑 Excluir este perfil</button>
-  </div>
+<!-- METAS -->
+<div class="page" id="page-metas">
+  <div class="page-header"><span class="page-title">Metas de Saude</span></div>
+  <div id="metas-content" style="padding-top:14px"></div>
+</div>
+
+<!-- PERFIL -->
+<div class="page" id="page-perfil">
+  <div class="page-header"><span class="page-title">Perfil</span></div>
+  <div id="perfil-content"></div>
 </div>
 
 <!-- ADD DOC -->
-<div id="view-add-doc" class="hidden">
-  <div class="header">
-    <button class="back-btn" onclick="showDocs()">←</button>
-    <div class="page-title">Adicionar Documento</div>
+<div class="page" id="page-add-doc">
+  <div class="page-header">
+    <button class="back-btn" onclick="closePage('page-add-doc')">&#8592;</button>
+    <span class="page-title">Adicionar Documento</span>
   </div>
-  <div class="body" style="padding-top:14px">
-    <div class="card">
-      <label class="label" style="margin-top:0">Nome / descrição</label>
+  <div class="form-section">
+    <div class="fcard">
+      <label class="flabel" style="margin-top:0">Nome / descricao</label>
       <input type="text" id="doc-nome" placeholder="Ex: Hemograma completo" autocomplete="off">
-      <label class="label">Categoria</label>
+      <label class="flabel">Categoria</label>
       <select id="doc-cat">
-        <option value="exame">🧪 Exame</option>
-        <option value="bioimpedancia">⚖️ Bioimpedância</option>
-        <option value="atestado">📋 Atestado</option>
-        <option value="receita">💊 Receita</option>
-        <option value="outro">📎 Outro</option>
+        <option value="exame">Exame de Sangue</option>
+        <option value="bioimpedancia">Bioimpedancia</option>
+        <option value="atestado">Atestado</option>
+        <option value="receita">Receita Medica</option>
+        <option value="outro">Outro</option>
       </select>
-      <label class="label">Data do documento</label>
-      <input type="date" id="doc-data">
-      <label class="label">Observações (opcional)</label>
-      <textarea id="doc-obs" placeholder="Notas adicionais…"></textarea>
-      <label class="label">Arquivo (imagem ou PDF)</label>
-      <div class="upload-box" id="upload-box" onclick="document.getElementById('file-input').click()">
-        <div style="font-size:28px;margin-bottom:6px">📎</div>
+      <label class="flabel">Mes e Ano do documento</label>
+      <input type="month" id="doc-mesano">
+      <label class="flabel">Observacoes (opcional)</label>
+      <textarea id="doc-obs" placeholder="Notas adicionais..."></textarea>
+      <label class="flabel">Arquivo (imagem ou PDF)</label>
+      <div class="upload-box" id="upload-box" onclick="document.getElementById('file-inp').click()">
+        <div class="upload-icon">&#128206;</div>
         <div class="upload-text" id="upload-text">Toque para selecionar arquivo</div>
         <div style="font-size:11px;color:var(--light);margin-top:4px">Imagem ou PDF</div>
       </div>
-      <input type="file" id="file-input" accept="image/*,application/pdf" style="display:none" onchange="handleFile(this)">
+      <input type="file" id="file-inp" accept="image/*,application/pdf" style="display:none" onchange="handleFile(this)">
+      <div id="drive-upload-info" class="hidden" style="margin-top:10px;padding:10px 12px;background:var(--teal-light);border-radius:10px;font-size:12px;color:var(--teal);border:1px solid #b2e0d8">
+        Drive conectado: arquivo salvo automaticamente na pasta do perfil com nome Categoria_MesAno.
+      </div>
     </div>
-    <button class="btn btn-green" onclick="saveDoc()">✓ Salvar documento</button>
-    <button class="btn btn-outline" onclick="showDocs()">Cancelar</button>
+    <button class="btn" onclick="saveDoc()">Salvar documento</button>
+    <button class="btn btn-grey" onclick="closePage('page-add-doc')">Cancelar</button>
   </div>
 </div>
 
 <!-- DOC DETAIL -->
-<div id="view-doc-detail" class="hidden">
-  <div class="header">
-    <button class="back-btn" onclick="showDocs()">←</button>
-    <div style="margin-top:10px">
-      <div style="font-size:19px;font-weight:bold" id="detail-nome"></div>
-      <div style="font-size:13px;color:var(--muted);margin-top:3px" id="detail-meta"></div>
+<div class="page" id="page-doc-detail">
+  <div class="page-header">
+    <button class="back-btn" onclick="closePage('page-doc-detail')">&#8592;</button>
+    <div style="flex:1">
+      <div class="page-title" id="det-nome" style="font-size:17px"></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:1px" id="det-meta"></div>
     </div>
   </div>
-  <div class="body" style="padding-top:14px">
-    <div class="card">
-      <p style="font-size:14px;color:var(--muted);line-height:1.6" id="detail-obs"></p>
-      <div id="detail-preview" style="margin-top:10px"></div>
+  <div class="detail-body">
+    <div class="detail-card">
+      <p class="detail-obs" id="det-obs"></p>
+      <div id="det-preview"></div>
+      <a id="det-drive-link" class="drive-link hidden" target="_blank">Abrir no Google Drive</a>
     </div>
-    <button class="btn btn-red" style="margin-top:16px" onclick="deleteDoc()">🗑 Excluir documento</button>
+    <button class="btn btn-red" onclick="deleteDoc()">Excluir documento</button>
   </div>
 </div>
 
-<!-- BACKUP -->
-<div id="view-drive" class="hidden">
-  <div class="header">
-    <button class="back-btn" onclick="showHome()">←</button>
-    <div class="page-title">☁ Backup & Restauração</div>
+<!-- EXAM CHART -->
+<div class="page" id="page-exam-chart">
+  <div class="page-header">
+    <button class="back-btn" onclick="closePage('page-exam-chart')">&#8592;</button>
+    <span class="page-title" id="chart-page-title">Analise de Exames</span>
   </div>
-  <div class="body" style="padding-top:14px">
-    <div class="card">
-      <p style="font-size:14px;color:var(--muted);line-height:1.7;margin:0">
-        Os dados ficam salvos neste dispositivo. Faça backup para não perder nada ao trocar de celular.
-      </p>
-    </div>
-    <div class="info-box">
-      <div class="info-box-title">📋 Como salvar no Google Drive</div>
-      <div class="info-box-body">
-        1. Clique em <strong>Baixar backup</strong><br>
-        2. Salve o arquivo <code>prontuario-saude.json</code> no Drive<br>
-        3. Para restaurar: baixe do Drive e clique em <strong>Importar backup</strong>
+  <div class="tab-bar" id="exam-tab-bar"></div>
+  <div class="chart-container" id="exam-chart-content"></div>
+</div>
+
+<!-- PROFILE FORM -->
+<div class="page" id="page-profile-form">
+  <div class="page-header">
+    <button class="back-btn" onclick="closePage('page-profile-form')">&#8592;</button>
+    <span class="page-title" id="pf-title">Novo Perfil</span>
+  </div>
+  <div class="form-section">
+    <div class="fcard">
+      <label class="flabel" style="margin-top:0">Nome completo</label>
+      <input type="text" id="pf-nome" placeholder="Ex: Renata Barros" autocomplete="off" oninput="updatePfPreview()">
+      <label class="flabel">Data de nascimento (opcional)</label>
+      <input type="date" id="pf-nasc">
+      <label class="flabel">Sexo (opcional)</label>
+      <select id="pf-sexo">
+        <option value="">Selecionar...</option>
+        <option value="F">Feminino</option>
+        <option value="M">Masculino</option>
+        <option value="O">Outro</option>
+      </select>
+      <label class="flabel">Pasta no Google Drive</label>
+      <select id="pf-folder">
+        <option value="">Nenhuma (salvar so localmente)</option>
+        <option value="1ImeAne1bS1lA3ZR4j4neNzJ-jrdoOd0A">Exames Renata</option>
+        <option value="1e9COIjqOgCV5W0D0z_ZWkETaXCipc27z">Exames Jamerson</option>
+        <option value="1RpoHBOsCBS2Ig0NhptUcmSlMgeruZ2iD">Exames Pedro</option>
+      </select>
+      <label class="flabel">Cor do avatar</label>
+      <div class="color-dots" id="color-dots"></div>
+      <div class="profile-preview hidden" id="pf-preview">
+        <div class="perfil-av" id="pf-preview-av"></div>
+        <span id="pf-preview-name" style="font-size:16px;font-weight:700"></span>
       </div>
     </div>
-    <p class="section-title">Exportar</p>
-    <button class="btn btn-green" onclick="exportData()">⬇ Baixar backup (.json)</button>
-    <p class="section-title">Importar</p>
-    <button class="btn" onclick="document.getElementById('import-input').click()">📂 Importar backup (.json)</button>
-    <input type="file" id="import-input" accept=".json" style="display:none" onchange="handleImport(this)">
-    <div style="margin-top:16px;padding:12px 14px;background:#fffbeb;border:1px solid #fbd38d;border-radius:12px;font-size:12px;color:#744210;line-height:1.6">
-      ⚠️ <strong>Atenção:</strong> Importar substitui todos os dados atuais. Faça backup antes de importar.
-    </div>
+    <button class="btn" id="pf-save-btn" onclick="saveProfile()">Criar perfil</button>
+    <button class="btn btn-red hidden" id="pf-del-btn" onclick="deleteProfile()">Excluir perfil</button>
   </div>
 </div>
+
+<!-- DRIVE SETUP -->
+<div class="page" id="page-drive-setup">
+  <div class="page-header">
+    <button class="back-btn" onclick="closePage('page-drive-setup')">&#8592;</button>
+    <span class="page-title">Conectar Drive</span>
+  </div>
+  <div class="setup-card">
+    <div class="setup-icon">&#9729;&#65039;</div>
+    <div class="setup-title">Integracao com Google Drive</div>
+    <div class="setup-text">Conecte sua conta Google para salvar arquivos automaticamente nas pastas certas e visualizar seus exames com graficos.</div>
+  </div>
+  <div class="form-section" style="padding-top:0">
+    <div class="fcard">
+      <label class="flabel" style="margin-top:0">Google OAuth Client ID</label>
+      <input type="text" id="client-id-input" placeholder="xxxxxx.apps.googleusercontent.com">
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+        Obtenha em <strong>console.cloud.google.com</strong> &rarr; APIs &amp; Services &rarr; Credentials
+      </div>
+    </div>
+    <button class="btn" onclick="connectDrive()">Conectar com Google</button>
+    <button class="btn btn-red hidden" id="btn-disconnect" onclick="disconnectDrive()">Desconectar Drive</button>
+  </div>
+  <div class="info-box">
+    <strong>Como obter o Client ID:</strong><br>
+    1. Acesse <strong>console.cloud.google.com</strong><br>
+    2. Crie um projeto, ative <strong>Drive API</strong> e <strong>Sheets API</strong><br>
+    3. Credentials &rarr; Create Credentials &rarr; <strong>OAuth 2.0 Client ID</strong><br>
+    4. Tipo: <strong>Web application</strong><br>
+    5. Em Authorized JavaScript Origins adicione a URL onde o app esta aberto<br>
+    6. Cole o Client ID acima e clique em Conectar
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="navTo('home')">
+    <span class="nav-icon">&#127968;</span>Inicio
+  </button>
+  <button class="nav-item" id="nav-historico" onclick="navTo('historico')">
+    <span class="nav-icon">&#128203;</span>Historico
+  </button>
+  <button class="nav-item" id="nav-metas" onclick="navTo('metas')">
+    <span class="nav-icon">&#127919;</span>Metas
+  </button>
+  <button class="nav-item" id="nav-perfil" onclick="navTo('perfil')">
+    <span class="nav-icon">&#128100;</span>Perfil
+  </button>
+</nav>
 
 <script>
-const CATS = {
-  exame:         { label:'Exame',         icon:'🧪', color:'#276749', bg:'#c6f6d5' },
-  bioimpedancia: { label:'Bioimpedância', icon:'⚖️', color:'#2b6cb0', bg:'#bee3f8' },
-  atestado:      { label:'Atestado',      icon:'📋', color:'#744210', bg:'#fefcbf' },
-  receita:       { label:'Receita',       icon:'💊', color:'#702459', bg:'#fed7e2' },
-  outro:         { label:'Outro',         icon:'📎', color:'#44337a', bg:'#e9d8fd' },
-};
-const COLORS = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#805ad5','#d53f8c'];
+const CATS={exame:{label:'Exame de Sangue',icon:'&#129978;',color:'#1a6640',bg:'#d4f5e9'},bioimpedancia:{label:'Bioimpedancia',icon:'&#9878;&#65039;',color:'#1a5a8a',bg:'#d0eeff'},atestado:{label:'Atestado',icon:'&#128203;',color:'#7a4a10',bg:'#fef0d0'},receita:{label:'Receita Medica',icon:'&#128138;',color:'#7a1a5a',bg:'#ffd5ef'},outro:{label:'Outro',icon:'&#128206;',color:'#4a3a7a',bg:'#e8e0ff'}};
+const COLORS=['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#805ad5','#d53f8c'];
+const MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const KNOWN_FOLDERS={'Renata':'1ImeAne1bS1lA3ZR4j4neNzJ-jrdoOd0A','Jamerson':'1e9COIjqOgCV5W0D0z_ZWkETaXCipc27z','Pedro':'1RpoHBOsCBS2Ig0NhptUcmSlMgeruZ2iD'};
+const RENATA_EXAMS={dates:['Nov/24','Fev/25','Mai/25','Jul/25','Set/25','Dez/25'],groups:{'Sangue & Metabolismo':{'Hemoglobina':{v:[11.9,12.7,12.5,12.6,12.4,13.1],u:'g/dL',lo:12,hi:15,inv:false},'Colesterol Total':{v:[131,162,148,131,134,128],u:'mg/dL',lo:null,hi:190,inv:false},'HDL':{v:[38,45,32,32,31,31],u:'mg/dL',lo:40,hi:null,inv:true},'LDL':{v:[75,95,103,82,91,84],u:'mg/dL',lo:null,hi:130,inv:false},'Glicose':{v:[95,100,82,80,76,77],u:'mg/dL',lo:60,hi:99,inv:false},'HbA1c':{v:[5.6,5.8,5.4,5.1,5.2,5.0],u:'%',lo:null,hi:5.7,inv:false},'Insulina':{v:[null,null,13.5,23.2,9.8,8.1],u:'uUI/mL',lo:3,hi:25,inv:false},'Acido Urico':{v:[7.3,5.8,5.2,5.0,4.4,4.6],u:'mg/dL',lo:1.5,hi:6.0,inv:false},'PCR':{v:[7.3,null,7.04,3.90,4.86,4.81],u:'mg/L',lo:null,hi:1.0,inv:false}},'Tireoide & Hormonios':{'TSH':{v:[null,1.64,0.80,0.90,0.87,1.65],u:'uUI/mL',lo:0.38,hi:5.33,inv:false},'T4 Livre':{v:[null,0.81,0.96,0.92,1.19,1.03],u:'ng/dL',lo:0.54,hi:1.24,inv:false},'Estradiol':{v:[null,null,81,160,27,33],u:'pg/mL',lo:null,hi:null,inv:false},'SHBG':{v:[null,null,29.8,23.4,17,13.5],u:'nmol/L',lo:10.8,hi:180,inv:false},'DHEA-S':{v:[null,null,108,94,136,125],u:'mcg/dL',lo:23,hi:266,inv:false},'Homocisteina':{v:[null,null,14.71,14.36,13.82,16.68],u:'umol/L',lo:5.2,hi:12.7,inv:false}},'Vitaminas & Nutrientes':{'Vitamina D':{v:[null,63.4,46.7,75,74,59],u:'ng/mL',lo:20,hi:60,inv:false},'Vitamina B12':{v:[null,447,509,650,473,535],u:'pg/mL',lo:211,hi:911,inv:false},'Acido Folico':{v:[null,null,9.9,13.66,17.53,24],u:'ng/mL',lo:5.38,hi:null,inv:true},'Ferritina':{v:[null,39,64,52,43,127],u:'ng/mL',lo:13,hi:150,inv:false}}}};
 
-let db = { profiles:[], docs:[] };
-let activeProfileId = null;
-let filterCat = 'all';
-let editingProfileId = null;
-let selectedColor = COLORS[5];
-let pendingFile = null;
-let viewingDocId = null;
+let db={profiles:[],docs:[]};
+let accessToken=null,tokenExpiry=0,activeProfileId=null,filterCat='all';
+let editingProfileId=null,selectedColor=COLORS[5],pendingFile=null,viewingDocId=null;
+let currentNav='home',pageStack=[],activeExamGroup=null,tokenClient=null;
 
-function persist() {
-  try { localStorage.setItem('prontuario_v2', JSON.stringify(db)); } catch(e) {}
-  const el = document.getElementById('saving-msg');
-  el.classList.remove('hidden');
-  setTimeout(()=>el.classList.add('hidden'), 1800);
+function persist(){try{localStorage.setItem('prontuario_v3',JSON.stringify(db));}catch(e){}showToast('Salvo');}
+function loadData(){
+  try{const d=localStorage.getItem('prontuario_v3')||localStorage.getItem('prontuario_v2');if(d)db=JSON.parse(d);}catch(e){}
+  const tok=localStorage.getItem('drive_token'),exp=parseInt(localStorage.getItem('drive_expiry')||'0');
+  if(tok&&Date.now()<exp){accessToken=tok;tokenExpiry=exp;updateDriveUI(true);}
 }
-function loadLocal() {
-  try { const d=localStorage.getItem('prontuario_v2')||localStorage.getItem('prontuario_v1'); if(d) db=JSON.parse(d); } catch(e) {}
+function initials(n){return(n||'').split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();}
+function fmtMY(val){if(!val)return'';const[y,m]=val.split('-');return MONTHS[parseInt(m)-1]+y;}
+function fmtMYD(val){if(!val)return'';const[y,m]=val.split('-');return MONTHS[parseInt(m)-1]+'/'+y;}
+function getProfile(id){return db.profiles.find(p=>p.id===id);}
+function profileDocs(id){return db.docs.filter(d=>d.profileId===id);}
+function todayMonth(){return new Date().toISOString().slice(0,7);}
+function showToast(msg,dur=1800){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);}
+
+function navTo(s){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+s).classList.add('active');
+  const ni=document.getElementById('nav-'+s);if(ni)ni.classList.add('active');
+  currentNav=s;pageStack=[];
+  const fab=document.getElementById('fab-add');
+  if(fab)fab.style.display=(s==='home'||s==='historico')?'flex':'none';
+  if(s==='home')renderHome();
+  if(s==='historico')renderHistory();
+  if(s==='metas')renderMetas();
+  if(s==='perfil')renderPerfil();
+  window.scrollTo(0,0);
 }
-function initials(n) { return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase(); }
-function fmtDate(iso) { if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
-function today() { return new Date().toISOString().split('T')[0]; }
-function getProfile(id) { return db.profiles.find(p=>p.id===id); }
-function profileDocs(id) { return db.docs.filter(d=>d.profileId===id); }
-
-const VIEWS = ['view-home','view-docs','view-profile-form','view-add-doc','view-doc-detail','view-drive'];
-function showView(id) { VIEWS.forEach(v=>document.getElementById(v).classList.toggle('hidden',v!==id)); }
-
-function renderColorDots() {
-  const el = document.getElementById('color-dots');
-  el.innerHTML = '';
-  COLORS.forEach(c => {
-    const dot = document.createElement('div');
-    dot.className = 'color-dot'+(c===selectedColor?' selected':'');
-    dot.style.background = c;
-    dot.onclick = () => { selectedColor=c; renderColorDots(); updateProfilePreview(); };
-    el.appendChild(dot);
-  });
+function openPage(pid){
+  pageStack.push(currentNav);
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(pid).classList.add('active');
+  const fab=document.getElementById('fab-add');if(fab)fab.style.display='none';
+  window.scrollTo(0,0);
 }
-
-function updateProfilePreview() {
-  const nome = document.getElementById('pf-nome').value.trim();
-  const row = document.getElementById('profile-preview-row');
-  if (nome) {
-    row.classList.remove('hidden');
-    document.getElementById('profile-preview-avatar').style.background = selectedColor;
-    document.getElementById('profile-preview-avatar').textContent = initials(nome);
-    document.getElementById('profile-preview-name').textContent = nome;
-  } else { row.classList.add('hidden'); }
+function closePage(pid){
+  document.getElementById(pid).classList.remove('active');
+  const prev=pageStack.pop();
+  if(prev)navTo(prev);else navTo('home');
 }
 
-function renderProfileBar() {
-  const bar = document.getElementById('profile-bar');
-  bar.innerHTML = '';
-  db.profiles.forEach(p => {
-    const av = document.createElement('div');
-    av.className = 'avatar'+(p.id===activeProfileId?' active':'');
-    av.style.background = p.cor;
-    av.title = p.nome;
-    av.textContent = initials(p.nome);
-    av.onclick = () => { activeProfileId=p.id; renderHome(); };
-    bar.appendChild(av);
-  });
-  const add = document.createElement('div');
-  add.className = 'add-avatar';
-  add.textContent = '+';
-  add.onclick = showAddProfile;
-  bar.appendChild(add);
+function connectDrive(){
+  const cid=document.getElementById('client-id-input').value.trim();
+  if(!cid){showToast('Cole seu Client ID primeiro');return;}
+  localStorage.setItem('drive_client_id',cid);
+  if(!window.google||!window.google.accounts||!window.google.accounts.oauth2){showToast('Abra via servidor local: python -m http.server',4000);return;}
+  tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly',callback:(resp)=>{
+    if(resp.error){showToast('Erro: '+resp.error,3000);return;}
+    accessToken=resp.access_token;tokenExpiry=Date.now()+(resp.expires_in*1000);
+    localStorage.setItem('drive_token',accessToken);localStorage.setItem('drive_expiry',String(tokenExpiry));
+    updateDriveUI(true);showToast('Drive conectado!',2500);closePage('page-drive-setup');renderHome();
+  }});
+  tokenClient.requestAccessToken({prompt:'consent'});
+}
+function disconnectDrive(){accessToken=null;tokenExpiry=0;localStorage.removeItem('drive_token');localStorage.removeItem('drive_expiry');updateDriveUI(false);showToast('Drive desconectado');renderPerfil();}
+function updateDriveUI(c){
+  const dot=document.getElementById('drive-dot'),txt=document.getElementById('drive-bar-text'),btn=document.getElementById('drive-bar-btn');
+  const info=document.getElementById('drive-upload-info'),disc=document.getElementById('btn-disconnect');
+  if(c){dot&&dot.classList.replace('off','on');if(txt)txt.textContent='Drive conectado';if(btn){btn.textContent='Configurar';btn.onclick=()=>{navTo('perfil');showDriveSetup();};}if(info)info.classList.remove('hidden');disc&&disc.classList.remove('hidden');}
+  else{dot&&dot.classList.replace('on','off');if(txt)txt.textContent='Dados salvos localmente';if(btn){btn.textContent='Conectar Drive';btn.onclick=()=>{navTo('perfil');showDriveSetup();};}if(info)info.classList.add('hidden');disc&&disc.classList.add('hidden');}
+}
+async function driveUpload(fileDataUrl,fileName,folderId,mimeType){
+  if(!accessToken)return null;
+  try{
+    const b64=fileDataUrl.split(',')[1],bytes=atob(b64),arr=new Uint8Array(bytes.length);
+    for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
+    const meta={name:fileName,parents:folderId?[folderId]:[]};
+    const form=new FormData();
+    form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+    form.append('file',new Blob([arr],{type:mimeType}));
+    const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form});
+    return await res.json();
+  }catch(e){console.error(e);return null;}
 }
 
-function renderHome() {
-  renderProfileBar();
-  const body = document.getElementById('home-body');
-  const p = getProfile(activeProfileId);
-  if (!p) {
-    body.innerHTML = `<div class="empty"><div class="empty-icon">🏥</div><div class="empty-text">Nenhum perfil criado</div><div class="empty-sub">Adicione um membro da família para começar</div><button class="btn" onclick="showAddProfile()" style="margin-top:20px;max-width:280px;margin-left:auto;margin-right:auto">+ Criar primeiro perfil</button></div>`;
-    return;
+function miniChart(values,lo,hi,h=44){
+  const pts=values.filter(v=>v!==null);
+  if(pts.length<2)return'<div style="height:'+h+'px;display:flex;align-items:center;justify-content:center;color:var(--light);font-size:11px">-</div>';
+  const W=200,P=6;let mn=Math.min(...pts)*0.93,mx=Math.max(...pts)*1.07;
+  if(mn===mx){mn*=0.9;mx*=1.1;}
+  const px=i=>P+(i/(pts.length-1))*(W-2*P),py=v=>h-P-((v-mn)/(mx-mn))*(h-2*P);
+  let band='';
+  if(lo!==null||hi!==null){const ly=lo!==null?Math.min(h-P,Math.max(P,py(lo))):h-P,hy=hi!==null?Math.min(h-P,Math.max(P,py(hi))):P;band='<rect x="'+P+'" y="'+Math.min(ly,hy)+'" width="'+(W-2*P)+'" height="'+Math.abs(ly-hy)+'" fill="rgba(39,174,96,.12)" rx="2"/>';}
+  const path=pts.map((v,i)=>(i===0?'M':'L')+px(i)+' '+py(v)).join(' ');
+  const lx=px(pts.length-1),ly=py(pts[pts.length-1]);
+  return'<svg viewBox="0 0 '+W+' '+h+'" style="width:100%;height:'+h+'px">'+band+'<path d="'+path+'" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+lx+'" cy="'+ly+'" r="4" fill="var(--teal)"/></svg>';
+}
+function fullChart(name,data,dates){
+  const nonNull=data.v.map((v,i)=>v!==null?{v,d:dates[i]}:null).filter(Boolean);
+  if(!nonNull.length)return'<div class="empty"><div class="empty-icon">chart</div><div class="empty-text">Sem dados</div></div>';
+  const vals=nonNull.map(x=>x.v);const{lo,hi}=data;
+  let mn=Math.min(...vals),mx=Math.max(...vals);
+  if(lo!==null)mn=Math.min(mn,lo*0.88);if(hi!==null)mx=Math.max(mx,hi*1.12);
+  if(mn===mx){mn*=0.9;mx*=1.1;}
+  const W=320,H=140,pL=38,pR=10,pT=18,pB=30,cW=W-pL-pR,cH=H-pT-pB;
+  const px=i=>pL+(i/(nonNull.length-1||1))*cW,py=v=>pT+(1-(v-mn)/(mx-mn))*cH;
+  let band='',loL='',hiL='';
+  if(lo!==null&&hi!==null)band='<rect x="'+pL+'" y="'+py(hi)+'" width="'+cW+'" height="'+Math.abs(py(lo)-py(hi))+'" fill="rgba(39,174,96,.1)" rx="3"/>';
+  if(lo!==null)loL='<line x1="'+pL+'" y1="'+py(lo)+'" x2="'+(pL+cW)+'" y2="'+py(lo)+'" stroke="#27ae60" stroke-width="1" stroke-dasharray="4,3"/>';
+  if(hi!==null)hiL='<line x1="'+pL+'" y1="'+py(hi)+'" x2="'+(pL+cW)+'" y2="'+py(hi)+'" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>';
+  const path=nonNull.map((p,i)=>(i===0?'M':'L')+px(i)+' '+py(p.v)).join(' ');
+  const yL=[mn,(mn+mx)/2,mx].map(v=>'<text x="'+(pL-4)+'" y="'+(py(v)+4)+'" text-anchor="end" font-size="9" fill="#8aa">'+v.toFixed(v<10?1:0)+'</text>').join('');
+  const xL=nonNull.map((p,i)=>'<text x="'+px(i)+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" fill="#8aa">'+p.d+'</text>').join('');
+  const dots=nonNull.map((p,i)=>{const ok=(lo===null||p.v>=lo)&&(hi===null||p.v<=hi),fill=ok?'#27ae60':'#e74c3c';return'<circle cx="'+px(i)+'" cy="'+py(p.v)+'" r="5" fill="'+fill+'" stroke="#fff" stroke-width="1.5"/><text x="'+px(i)+'" y="'+(py(p.v)-9)+'" text-anchor="middle" font-size="9" fill="'+fill+'" font-weight="bold">'+p.v+'</text>';}).join('');
+  return'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">'+band+loL+hiL+'<path d="'+path+'" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+dots+yL+xL+'</svg>';
+}
+
+function examStatus(m){const last=[...m.v].reverse().find(v=>v!==null);if(last===undefined)return null;if(m.inv)return last<m.lo?'low':'ok';if(m.lo!==null&&last<m.lo)return'low';if(m.hi!==null&&last>m.hi)return'high';return'ok';}
+function trendDir(v){const pts=v.filter(x=>x!==null);if(pts.length<2)return'stable';const d=(pts[pts.length-1]-pts[pts.length-2])/Math.abs(pts[pts.length-2]||1);return d>0.05?'up':d<-0.05?'down':'stable';}
+function badgeHTML(m){const s=examStatus(m);if(!s)return'';const t=trendDir(m.v);if(s==='ok'){if(m.hi&&!m.inv&&t==='down')return'<span class="badge badge-green">Melhorando</span>';if(m.lo&&m.inv&&t==='up')return'<span class="badge badge-green">Melhorando</span>';return'<span class="badge badge-green">Normal</span>';}if(s==='high')return'<span class="badge badge-orange">Elevado</span>';if(s==='low')return'<span class="badge badge-red">Abaixo</span>';return'';}
+
+function renderHome(){
+  renderChips();
+  const p=getProfile(activeProfileId);
+  if(!p){document.getElementById('home-name').textContent='Saude da Familia';document.getElementById('home-sub').textContent='Crie um perfil para comecar';document.getElementById('cards-grid').innerHTML='<div style="grid-column:1/-1"><div class="empty"><div class="empty-icon">hospital</div><div class="empty-text">Nenhum perfil criado</div><div class="empty-sub">Adicione um membro da familia</div><button class="btn" style="max-width:240px;margin:20px auto 0" onclick="openAddProfile()">Criar primeiro perfil</button></div></div>';return;}
+  const first=p.nome.split(' ')[0];
+  document.getElementById('home-name').textContent='Ola, '+first+'!';
+  document.getElementById('home-sub').textContent='Acompanhe sua saude!';
+  const docs=profileDocs(p.id);
+  const exDocs=docs.filter(d=>d.categoria==='exame'),bioDocs=docs.filter(d=>d.categoria==='bioimpedancia');
+  const atDocs=docs.filter(d=>d.categoria==='atestado'),rxDocs=docs.filter(d=>d.categoria==='receita');
+  const ed=first==='Renata'?RENATA_EXAMS:null;
+  const hb=ed&&ed.groups['Sangue & Metabolismo']['Hemoglobina'],col=ed&&ed.groups['Sangue & Metabolismo']['Colesterol Total'];
+  const lastHb=hb?[...hb.v].reverse().find(v=>v!==null):null,lastCol=col?[...col.v].reverse().find(v=>v!==null):null;
+  const lastDate=ed?ed.dates[ed.dates.length-1]:(exDocs[0]&&exDocs[0].mesano?fmtMYD(exDocs[0].mesano):'--');
+  const hbChart=hb?miniChart(hb.v,hb.lo,hb.hi):'';
+  const ovBadge=hb&&trendDir(hb.v)==='down'&&examStatus(hb)!=='ok'?'<span class="badge badge-orange">Atencao</span>':'<span class="badge badge-green">Melhora</span>';
+  const bioDate=bioDocs[0]&&bioDocs[0].mesano?fmtMYD(bioDocs[0].mesano):(bioDocs.length?'Cadastrado':'--');
+  function listItems(arr){if(!arr.length)return'<div style="font-size:11px;color:var(--light);padding:6px 0">Nenhum documento</div>';return arr.slice(0,3).map(d=>'<div class="dcard-list-item"><span>doc</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+d.nome+'</span></div>').join('');}
+  document.getElementById('cards-grid').innerHTML=
+    '<div class="dcard" onclick="openExamChart()"><div class="dcard-head"><span class="dcard-icon">sangue</span><span class="dcard-title">Exames de Sangue</span></div><div class="dcard-body"><div class="dcard-date">Ultimo: '+lastDate+'</div>'+(lastHb!==null?'<div class="dcard-metric">Hemoglobina: <b>'+lastHb+' g/dL</b></div>':'')+(lastCol!==null?'<div class="dcard-metric">Colesterol: <b>'+lastCol+' mg/dL</b></div>':'')+(hb?ovBadge:'')+'<div class="dcard-chart">'+hbChart+'</div></div><div class="dcard-btn">Ver Comparativo</div></div>'+
+    '<div class="dcard" onclick="navTo(\'historico\');setFilter(\'bioimpedancia\')"><div class="dcard-head"><span class="dcard-icon">bio</span><span class="dcard-title">Bioimpedancia</span></div><div class="dcard-body"><div class="dcard-date">Ultima: '+bioDate+'</div>'+(bioDocs[0]&&bioDocs[0].obs?'<div style="font-size:11px;color:var(--muted);margin-bottom:4px">'+bioDocs[0].obs.slice(0,55)+'</div>':'<div style="font-size:11px;color:var(--light);padding:4px 0">Adicione sua bioimpedancia</div>')+(bioDocs.length?'<span class="badge badge-green">Registrado</span>':'')+'<div style="height:44px;display:flex;align-items:center;justify-content:center;color:#cde;font-size:32px">bio</div></div><div class="dcard-btn">Ver Comparativo</div></div>'+
+    '<div class="dcard" onclick="navTo(\'historico\');setFilter(\'atestado\')"><div class="dcard-head"><span class="dcard-icon">doc</span><span class="dcard-title">Atestados</span></div><div class="dcard-body"><div class="dcard-date">Total: '+atDocs.length+' documento'+(atDocs.length!==1?'s':'')+'</div>'+listItems(atDocs)+'</div><div class="dcard-btn">Ver Todos</div></div>'+
+    '<div class="dcard" onclick="navTo(\'historico\');setFilter(\'receita\')"><div class="dcard-head"><span class="dcard-icon">rx</span><span class="dcard-title">Receitas Medicas</span></div><div class="dcard-body"><div class="dcard-date">Total: '+rxDocs.length+' receita'+(rxDocs.length!==1?'s':'')+'</div>'+listItems(rxDocs)+'</div><div class="dcard-btn">Ver Todas</div></div>';
+  updateDriveUI(!!accessToken);
+}
+function renderChips(){
+  const bar=document.getElementById('profile-chips');bar.innerHTML='';
+  db.profiles.forEach(p=>{const c=document.createElement('div');c.className='chip'+(p.id===activeProfileId?' active':'');c.innerHTML='<div class="chip-av" style="background:'+p.cor+'">'+initials(p.nome)+'</div>'+p.nome.split(' ')[0];c.onclick=()=>{activeProfileId=p.id;renderHome();};bar.appendChild(c);});
+  const a=document.createElement('div');a.className='chip-add';a.textContent='+';a.onclick=openAddProfile;bar.appendChild(a);
+}
+
+function openExamChart(){
+  const p=getProfile(activeProfileId);if(!p)return;
+  const first=p.nome.split(' ')[0];
+  const ed=first==='Renata'?RENATA_EXAMS:null;
+  if(!ed){showToast('Dados nao disponiveis para este perfil');return;}
+  activeExamGroup=Object.keys(ed.groups)[0];
+  document.getElementById('chart-page-title').textContent='Analise - '+first;
+  renderExamTabs(ed);renderExamCards(ed);openPage('page-exam-chart');
+}
+function renderExamTabs(ed){document.getElementById('exam-tab-bar').innerHTML=Object.keys(ed.groups).map(g=>'<button class="tab'+(g===activeExamGroup?' active':'')+'" onclick="switchGroup(\''+g.replace(/'/g,"\\'")+'\')">'+(g==='Sangue & Metabolismo'?'Sangue':'g'==='Tireoide & Hormonios'?'Hormonios':'Vitaminas')+'</button>').join('');}
+function switchGroup(g){activeExamGroup=g;const p=getProfile(activeProfileId);const ed=p&&p.nome.split(' ')[0]==='Renata'?RENATA_EXAMS:null;if(ed){renderExamTabs(ed);renderExamCards(ed);}}
+function renderExamCards(ed){
+  const group=ed.groups[activeExamGroup],dates=ed.dates;let html='';
+  for(const[name,data]of Object.entries(group)){
+    const nonNull=data.v.filter(v=>v!==null);if(!nonNull.length)continue;
+    const last=nonNull[nonNull.length-1],badge=badgeHTML(data),t=trendDir(data.v);
+    const tIcon=t==='up'?'Subindo':t==='down'?'Caindo':'Estavel';
+    const tColor=t==='stable'?'var(--muted)':t==='up'&&!data.inv?'var(--orange)':'var(--green)';
+    const refText=[data.lo!==null?'Min: '+data.lo:null,data.hi!==null?'Max: '+data.hi:null].filter(Boolean).join(' - ');
+    html+='<div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="chart-title">'+name+'</div><div class="chart-current">'+last+' <span style="font-size:14px;font-weight:400;color:var(--muted)">'+data.u+'</span></div>'+badge+'</div><div style="text-align:right;margin-top:4px"><div style="font-size:10px;color:var(--muted)">'+refText+'</div><div class="chart-trend" style="color:'+tColor+';justify-content:flex-end;margin-top:10px">'+tIcon+'</div></div></div><div style="margin-top:10px">'+fullChart(name,data,dates)+'</div></div>';
   }
-  const docs = profileDocs(p.id);
-  const counts = Object.fromEntries(Object.keys(CATS).map(k=>[k,docs.filter(d=>d.categoria===k).length]));
-  const recentes = [...docs].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,3);
-  body.innerHTML = `
-    <div class="card">
-      <div class="profile-card-top">
-        <div class="avatar" style="background:${p.cor};width:54px;height:54px;font-size:20px;border:none;flex-shrink:0">${initials(p.nome)}</div>
-        <div>
-          <div class="profile-name">${p.nome}</div>
-          <div class="profile-info">${p.nascimento?'Nasc.: '+fmtDate(p.nascimento):''}${p.nascimento&&p.sexo?' · ':''}${p.sexo?({F:'Feminino',M:'Masculino',O:'Outro'}[p.sexo]||''):''}</div>
-        </div>
-        <button class="edit-btn" onclick="showEditProfile('${p.id}')">✏️</button>
-      </div>
-      <div class="stats-row">
-        ${Object.entries(CATS).map(([k,v])=>`<div class="stat"><div class="stat-icon">${v.icon}</div><div class="stat-num" style="color:${v.color}">${counts[k]||0}</div><div class="stat-label">${v.label}</div></div>`).join('')}
-      </div>
-    </div>
-    <p class="section-title">Documentos</p>
-    <button class="btn" onclick="showDocs()">📁 Ver todos (${docs.length})</button>
-    <button class="btn btn-green" onclick="showAddDoc()" style="margin-top:8px">+ Adicionar documento</button>
-    ${recentes.length?`<p class="section-title">Recentes</p>${recentes.map(d=>docItemHTML(d)).join('')}`:''}
-  `;
+  document.getElementById('exam-chart-content').innerHTML=html||'<div class="empty"><div class="empty-text">Sem dados</div></div>';
 }
 
-function docItemHTML(doc) {
-  const cat = CATS[doc.categoria]||CATS.outro;
-  return `<div class="doc-item" onclick="showDocDetail('${doc.id}')">
-    <div class="doc-icon" style="background:${cat.bg};color:${cat.color}">${cat.icon}</div>
-    <div style="flex:1;min-width:0"><div class="doc-name">${doc.nome}</div><div class="doc-meta">${cat.label}${doc.data?' · '+fmtDate(doc.data):''}</div></div>
-    <div style="color:var(--light);font-size:20px">›</div>
-  </div>`;
+function renderHistory(){
+  const p=getProfile(activeProfileId);const docs=p?profileDocs(p.id):[];
+  const filtered=filterCat==='all'?docs:docs.filter(d=>d.categoria===filterCat);
+  const sorted=[...filtered].sort((a,b)=>(b.mesano||'').localeCompare(a.mesano||''));
+  document.getElementById('hist-filter').innerHTML='<button class="fchip'+(filterCat==='all'?' active':'')+'" onclick="setFilter(\'all\')">Todos ('+docs.length+')</button>'+Object.entries(CATS).map(([k,v])=>'<button class="fchip'+(filterCat===k?' active':'')+'" onclick="setFilter(\''+k+'\')">'+v.label+'</button>').join('');
+  const list=document.getElementById('hist-list');
+  if(!p){list.innerHTML='<div class="empty"><div class="empty-text">Selecione um perfil</div></div>';return;}
+  if(!sorted.length){list.innerHTML='<div class="empty"><div class="empty-icon">pasta</div><div class="empty-text">Nenhum documento</div><div class="empty-sub">Toque em + para adicionar</div></div>';return;}
+  list.innerHTML=sorted.map(d=>{const c=CATS[d.categoria]||CATS.outro;return'<div class="doc-item" onclick="openDocDetail(\''+d.id+'\')"><div class="doc-icon-box" style="background:'+c.bg+'">doc</div><div style="flex:1;min-width:0"><div class="doc-name">'+d.nome+'</div><div class="doc-meta">'+c.label+(d.mesano?' - '+fmtMYD(d.mesano):'')+'</div></div><div class="doc-arrow">></div></div>';}).join('');
+}
+function setFilter(cat){filterCat=cat;renderHistory();}
+
+function renderMetas(){
+  const p=getProfile(activeProfileId);const first=p&&p.nome.split(' ')[0];
+  const ed=first==='Renata'?RENATA_EXAMS:null;
+  const el=document.getElementById('metas-content');
+  if(!ed){el.innerHTML='<div class="empty"><div class="empty-text">Selecione o perfil Renata</div></div>';return;}
+  const all=Object.values(ed.groups).flatMap(g=>Object.entries(g));
+  const goals=all.filter(([,d])=>d.lo!==null||d.hi!==null).map(([name,data])=>{
+    const pts=data.v.filter(v=>v!==null);if(!pts.length)return null;
+    const last=pts[pts.length-1],s=examStatus(data);const{lo,hi}=data;
+    let pct;if(lo!==null&&hi!==null){const r=hi-lo,ideal=(lo+hi)/2;pct=Math.max(0,Math.min(100,100-(Math.abs(last-ideal)/r)*100));}else if(hi!==null){pct=last<=hi?100:Math.max(10,(hi/last)*100);}else{pct=last>=lo?100:Math.max(10,(last/lo)*100);}
+    const target=lo!==null&&hi!==null?lo+'-'+hi+' '+data.u:hi!==null?'< '+hi+' '+data.u:'> '+lo+' '+data.u;
+    return{name,last,target,pct:Math.round(pct),s,u:data.u};
+  }).filter(Boolean);
+  const bad=goals.filter(g=>g.s!=='ok'),good=goals.filter(g=>g.s==='ok');
+  const render=g=>{const color=g.s==='ok'?'var(--green)':g.pct>60?'var(--orange)':'var(--red)';const cls=g.s==='ok'?'badge-green':g.pct>60?'badge-orange':'badge-red';const lbl=g.s==='ok'?'Normal':g.pct>60?'Atencao':'Fora do alvo';return'<div class="meta-card"><div class="meta-head"><span class="meta-name">'+g.name+'</span><span class="badge '+cls+'">'+lbl+'</span></div><div class="meta-bar-bg"><div class="meta-bar-fill" style="width:'+g.pct+'%;background:'+color+'"></div></div><div class="meta-info"><span>Atual: <b>'+g.last+' '+g.u+'</b></span><span>Meta: '+g.target+'</span></div></div>';};
+  el.innerHTML=(bad.length?'<div style="padding:14px 14px 4px;font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1px">Atencao ('+bad.length+')</div>'+bad.map(render).join(''):'')+'<div style="padding:14px 14px 4px;font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px">Dentro do alvo ('+good.length+')</div>'+good.map(render).join('')+'<div class="info-box" style="font-size:11px">Este app e apenas para organizacao pessoal. Nao constitui diagnostico medico. Consulte sempre seu medico.</div>';
 }
 
-function renderDocs() {
-  const p = getProfile(activeProfileId); if(!p) return;
-  document.getElementById('docs-avatar').style.background = p.cor;
-  document.getElementById('docs-avatar').textContent = initials(p.nome);
-  document.getElementById('docs-profile-name').textContent = p.nome;
-  const docs = profileDocs(p.id);
-  document.getElementById('docs-count').textContent = `${docs.length} documento${docs.length!==1?'s':''}`;
-  const filtered = filterCat==='all' ? docs : docs.filter(d=>d.categoria===filterCat);
-  document.getElementById('filter-bar').innerHTML =
-    `<button class="filter-btn${filterCat==='all'?' active':''}" onclick="setFilter('all')">Todos</button>`+
-    Object.entries(CATS).map(([k,v])=>`<button class="filter-btn${filterCat===k?' active':''}" onclick="setFilter('${k}')">${v.icon} ${v.label}</button>`).join('');
-  const sorted = [...filtered].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
-  document.getElementById('docs-list').innerHTML = sorted.length
-    ? sorted.map(d=>docItemHTML(d)).join('')
-    : `<div class="empty"><div class="empty-icon">${filterCat==='all'?'📁':CATS[filterCat]?.icon||'📁'}</div><div class="empty-text">Nenhum documento</div><div class="empty-sub">Adicione o primeiro!</div></div>`;
+function renderPerfil(){
+  const c=!!accessToken;
+  document.getElementById('perfil-content').innerHTML='<div class="perfil-section"><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Membros da familia</div><div class="perfil-card">'+(db.profiles.length?db.profiles.map(p=>'<div class="perfil-row" onclick="openEditProfile(\''+p.id+'\')"><div class="perfil-av" style="background:'+p.cor+'">'+initials(p.nome)+'</div><div class="perfil-info"><div class="perfil-name">'+p.nome+'</div><div class="perfil-detail">'+(p.nascimento||'')+((p.nascimento&&p.sexo)?' - ':'')+({F:'Feminino',M:'Masculino',O:'Outro'}[p.sexo]||'')+'</div></div><div style="color:var(--light);font-size:18px">></div></div>').join(''):'<div style="color:var(--muted);font-size:13px;padding:10px 0">Nenhum perfil criado</div>')+'</div><button class="btn btn-outline" onclick="openAddProfile()">+ Adicionar membro</button><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:22px 0 10px">Google Drive</div><div class="perfil-card" style="padding:16px"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:30px">cloud</div><div style="flex:1"><div style="font-size:14px;font-weight:700">Google Drive</div><div style="font-size:12px;color:'+(c?'var(--green)':'var(--orange)')+';margin-top:2px">'+(c?'Conectado':'Nao conectado')+'</div></div><button class="btn" style="width:auto;padding:8px 14px;font-size:12px;margin:0" onclick="showDriveSetup()">'+(c?'Configurar':'Conectar')+'</button></div></div></div>';
 }
+function showDriveSetup(){document.getElementById('client-id-input').value=localStorage.getItem('drive_client_id')||'';updateDriveUI(!!accessToken);openPage('page-drive-setup');}
 
-function showHome() { showView('view-home'); renderHome(); }
-function showDocs() { showView('view-docs'); renderDocs(); }
-function setFilter(cat) { filterCat=cat; renderDocs(); }
-
-function showAddProfile() {
-  editingProfileId=null; selectedColor=COLORS[5];
-  document.getElementById('profile-form-title').textContent='Novo Perfil';
-  document.getElementById('pf-nome').value='';
-  document.getElementById('pf-nasc').value='';
-  document.getElementById('pf-sexo').value='';
-  document.getElementById('save-profile-btn').textContent='Criar perfil';
-  document.getElementById('delete-profile-btn').classList.add('hidden');
-  document.getElementById('profile-preview-row').classList.add('hidden');
-  renderColorDots(); showView('view-profile-form');
-  setTimeout(()=>document.getElementById('pf-nome').focus(),150);
-}
-
-function showEditProfile(id) {
-  const p=getProfile(id); if(!p) return;
-  editingProfileId=id; selectedColor=p.cor;
-  document.getElementById('profile-form-title').textContent='Editar Perfil';
-  document.getElementById('pf-nome').value=p.nome;
-  document.getElementById('pf-nasc').value=p.nascimento||'';
-  document.getElementById('pf-sexo').value=p.sexo||'';
-  document.getElementById('save-profile-btn').textContent='Salvar alterações';
-  document.getElementById('delete-profile-btn').classList.remove('hidden');
-  renderColorDots(); updateProfilePreview(); showView('view-profile-form');
-}
-
-function showAddDoc() {
-  document.getElementById('doc-nome').value='';
-  document.getElementById('doc-cat').value='exame';
-  document.getElementById('doc-data').value=today();
-  document.getElementById('doc-obs').value='';
-  document.getElementById('upload-text').textContent='Toque para selecionar arquivo';
-  document.getElementById('upload-text').classList.remove('success');
+function openAddDoc(){
+  document.getElementById('doc-nome').value='';document.getElementById('doc-cat').value='exame';
+  document.getElementById('doc-mesano').value=todayMonth();document.getElementById('doc-obs').value='';
+  document.getElementById('upload-text').textContent='Toque para selecionar arquivo';document.getElementById('upload-text').classList.remove('ok');
   document.getElementById('upload-box').classList.remove('has-file');
-  pendingFile=null; showView('view-add-doc');
-  setTimeout(()=>document.getElementById('doc-nome').focus(),150);
+  if(accessToken)document.getElementById('drive-upload-info').classList.remove('hidden');else document.getElementById('drive-upload-info').classList.add('hidden');
+  pendingFile=null;openPage('page-add-doc');
+}
+function handleFile(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{pendingFile={data:ev.target.result,name:file.name,type:file.type};document.getElementById('upload-text').textContent='OK: '+file.name;document.getElementById('upload-text').classList.add('ok');document.getElementById('upload-box').classList.add('has-file');};r.readAsDataURL(file);}
+async function saveDoc(){
+  const nome=document.getElementById('doc-nome').value.trim();if(!nome){showToast('Digite o nome do documento');return;}
+  const mesano=document.getElementById('doc-mesano').value,categoria=document.getElementById('doc-cat').value,obs=document.getElementById('doc-obs').value;
+  const p=getProfile(activeProfileId);let driveFileId=null,driveUrl=null;
+  if(pendingFile&&accessToken&&p){
+    const ext=pendingFile.name.split('.').pop(),catLabel=(CATS[categoria]&&CATS[categoria].label||'Documento').replace(/\s+/g,''),myStr=mesano?fmtMY(mesano):'SemData',newName=catLabel+'_'+myStr+'.'+ext;
+    const folderId=p.driveFolder||null;showToast('Enviando para o Drive...',5000);
+    const res=await driveUpload(pendingFile.data,newName,folderId,pendingFile.type);
+    if(res&&res.id){driveFileId=res.id;driveUrl=res.webViewLink;showToast('Salvo no Drive!');}else showToast('Erro no upload. Salvo localmente.');
+  }
+  db.docs.push({id:Date.now().toString(),profileId:activeProfileId,nome,categoria,mesano,obs,fileData:pendingFile&&pendingFile.data||null,fileName:pendingFile&&pendingFile.name||null,fileType:pendingFile&&pendingFile.type||null,driveFileId,driveUrl,createdAt:new Date().toISOString()});
+  persist();closePage('page-add-doc');renderHome();
 }
 
-function showDocDetail(id) {
-  viewingDocId=id;
-  const doc=db.docs.find(d=>d.id===id); if(!doc) return;
+function openDocDetail(id){
+  viewingDocId=id;const doc=db.docs.find(d=>d.id===id);if(!doc)return;
   const cat=CATS[doc.categoria]||CATS.outro;
-  document.getElementById('detail-nome').textContent=doc.nome;
-  document.getElementById('detail-meta').textContent=`${cat.icon} ${cat.label}${doc.data?' · '+fmtDate(doc.data):''}`;
-  const obsEl=document.getElementById('detail-obs');
-  obsEl.textContent=doc.obs||''; obsEl.style.display=doc.obs?'block':'none';
-  const prev=document.getElementById('detail-preview');
-  if (doc.fileData) {
-    if (doc.fileType?.startsWith('image/')) prev.innerHTML=`<img src="${doc.fileData}" alt="" style="width:100%;border-radius:10px">`;
-    else if (doc.fileType==='application/pdf') prev.innerHTML=`<iframe src="${doc.fileData}" style="width:100%;height:500px;border:none;border-radius:10px"></iframe>`;
-    else prev.innerHTML=`<a href="${doc.fileData}" download="${doc.fileName||'arquivo'}" class="btn btn-outline" style="text-decoration:none;display:block;text-align:center">⬇ Baixar ${doc.fileName||'arquivo'}</a>`;
-  } else {
-    prev.innerHTML='<div style="color:var(--light);font-size:13px;text-align:center;padding:10px 0">Nenhum arquivo anexado</div>';
-  }
-  showView('view-doc-detail');
+  document.getElementById('det-nome').textContent=doc.nome;
+  document.getElementById('det-meta').textContent=cat.label+(doc.mesano?' - '+fmtMYD(doc.mesano):'');
+  const obsEl=document.getElementById('det-obs');obsEl.textContent=doc.obs||'';obsEl.style.display=doc.obs?'block':'none';
+  const prev=document.getElementById('det-preview');
+  if(doc.fileData){if(doc.fileType&&doc.fileType.startsWith('image/'))prev.innerHTML='<img src="'+doc.fileData+'" alt="" style="width:100%;border-radius:12px;margin-top:10px">';else if(doc.fileType==='application/pdf')prev.innerHTML='<iframe src="'+doc.fileData+'" style="width:100%;height:440px;border:none;border-radius:12px;margin-top:10px"></iframe>';else prev.innerHTML='<a href="'+doc.fileData+'" download="'+(doc.fileName||'arquivo')+'" class="btn btn-outline" style="text-decoration:none;text-align:center;margin-top:10px">Baixar arquivo</a>';}else prev.innerHTML='';
+  const dl=document.getElementById('det-drive-link');if(doc.driveUrl){dl.href=doc.driveUrl;dl.classList.remove('hidden');}else dl.classList.add('hidden');
+  openPage('page-doc-detail');
 }
+function deleteDoc(){if(!confirm('Excluir este documento?'))return;db.docs=db.docs.filter(d=>d.id!==viewingDocId);persist();closePage('page-doc-detail');renderHistory();}
 
-function saveProfile() {
-  const nome=document.getElementById('pf-nome').value.trim();
-  if (!nome) { alert('Digite o nome completo.'); return; }
-  if (editingProfileId) {
-    db.profiles=db.profiles.map(p=>p.id===editingProfileId?{...p,nome,nascimento:document.getElementById('pf-nasc').value,sexo:document.getElementById('pf-sexo').value,cor:selectedColor}:p);
-  } else {
-    const p={id:Date.now().toString(),nome,nascimento:document.getElementById('pf-nasc').value,sexo:document.getElementById('pf-sexo').value,cor:selectedColor};
-    db.profiles.push(p); activeProfileId=p.id;
-  }
-  persist(); showHome();
+function openAddProfile(){editingProfileId=null;selectedColor=COLORS[5];document.getElementById('pf-title').textContent='Novo Perfil';document.getElementById('pf-nome').value='';document.getElementById('pf-nasc').value='';document.getElementById('pf-sexo').value='';document.getElementById('pf-folder').value='';document.getElementById('pf-save-btn').textContent='Criar perfil';document.getElementById('pf-del-btn').classList.add('hidden');document.getElementById('pf-preview').classList.add('hidden');renderColorDots();openPage('page-profile-form');}
+function openEditProfile(id){const p=getProfile(id);if(!p)return;editingProfileId=id;selectedColor=p.cor;document.getElementById('pf-title').textContent='Editar Perfil';document.getElementById('pf-nome').value=p.nome;document.getElementById('pf-nasc').value=p.nascimento||'';document.getElementById('pf-sexo').value=p.sexo||'';document.getElementById('pf-folder').value=p.driveFolder||'';document.getElementById('pf-save-btn').textContent='Salvar alteracoes';document.getElementById('pf-del-btn').classList.remove('hidden');renderColorDots();updatePfPreview();openPage('page-profile-form');}
+function renderColorDots(){const el=document.getElementById('color-dots');el.innerHTML='';COLORS.forEach(c=>{const d=document.createElement('div');d.className='cdot'+(c===selectedColor?' sel':'');d.style.background=c;d.onclick=()=>{selectedColor=c;renderColorDots();updatePfPreview();};el.appendChild(d);});}
+function updatePfPreview(){const nome=document.getElementById('pf-nome').value.trim();const row=document.getElementById('pf-preview');if(nome){row.classList.remove('hidden');document.getElementById('pf-preview-av').style.background=selectedColor;document.getElementById('pf-preview-av').textContent=initials(nome);document.getElementById('pf-preview-name').textContent=nome;}else row.classList.add('hidden');}
+function saveProfile(){
+  const nome=document.getElementById('pf-nome').value.trim();if(!nome){showToast('Digite o nome');return;}
+  const driveFolder=document.getElementById('pf-folder').value||null;
+  if(editingProfileId){db.profiles=db.profiles.map(p=>p.id===editingProfileId?Object.assign({},p,{nome,nascimento:document.getElementById('pf-nasc').value,sexo:document.getElementById('pf-sexo').value,cor:selectedColor,driveFolder}):p);}
+  else{const p={id:Date.now().toString(),nome,nascimento:document.getElementById('pf-nasc').value,sexo:document.getElementById('pf-sexo').value,cor:selectedColor,driveFolder};db.profiles.push(p);activeProfileId=p.id;}
+  persist();closePage('page-profile-form');navTo('home');
 }
+function deleteProfile(){if(!confirm('Excluir perfil e todos os documentos?'))return;db.docs=db.docs.filter(d=>d.profileId!==editingProfileId);db.profiles=db.profiles.filter(p=>p.id!==editingProfileId);persist();activeProfileId=db.profiles[0]&&db.profiles[0].id||null;closePage('page-profile-form');navTo('home');}
 
-function deleteProfile() {
-  if (!confirm('Excluir o perfil e todos os documentos?')) return;
-  db.docs=db.docs.filter(d=>d.profileId!==editingProfileId);
-  db.profiles=db.profiles.filter(p=>p.id!==editingProfileId);
-  persist(); activeProfileId=db.profiles[0]?.id||null; showHome();
-}
+(function createFab(){const fab=document.createElement('button');fab.id='fab-add';fab.style.cssText='position:fixed;bottom:74px;right:18px;width:52px;height:52px;border-radius:26px;background:var(--teal);color:#fff;font-size:28px;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(26,158,143,.4);cursor:pointer;z-index:90;line-height:1';fab.textContent='+';fab.onclick=()=>openAddDoc();document.body.appendChild(fab);})();
 
-function handleFile(input) {
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    pendingFile={data:ev.target.result,name:file.name,type:file.type};
-    document.getElementById('upload-text').textContent='✓ '+file.name;
-    document.getElementById('upload-text').classList.add('success');
-    document.getElementById('upload-box').classList.add('has-file');
-    const match=file.name.match(/(\d{2})[.\-_](\d{2})[.\-_](\d{4})/);
-    if (match&&!document.getElementById('doc-data').value) document.getElementById('doc-data').value=`${match[3]}-${match[2]}-${match[1]}`;
-  };
-  reader.readAsDataURL(file);
-}
-
-function saveDoc() {
-  const nome=document.getElementById('doc-nome').value.trim();
-  if (!nome) { alert('Digite o nome do documento.'); return; }
-  db.docs.push({id:Date.now().toString(),profileId:activeProfileId,nome,categoria:document.getElementById('doc-cat').value,data:document.getElementById('doc-data').value,obs:document.getElementById('doc-obs').value,fileData:pendingFile?.data||null,fileName:pendingFile?.name||null,fileType:pendingFile?.type||null,createdAt:new Date().toISOString()});
-  persist(); showDocs();
-}
-
-function deleteDoc() {
-  if (!confirm('Excluir este documento?')) return;
-  db.docs=db.docs.filter(d=>d.id!==viewingDocId);
-  persist(); showDocs();
-}
-
-function exportData() {
-  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='prontuario-saude.json'; a.click(); URL.revokeObjectURL(url);
-}
-
-function handleImport(input) {
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try {
-      const imp=JSON.parse(ev.target.result);
-      if (!imp.profiles||!imp.docs) throw new Error();
-      if (!confirm(`Importar ${imp.profiles.length} perfil(s) e ${imp.docs.length} documento(s)?\n\nOs dados atuais serão substituídos.`)) return;
-      db=imp; persist(); activeProfileId=db.profiles[0]?.id||null; showHome();
-      alert('✅ Dados importados com sucesso!');
-    } catch { alert('❌ Arquivo inválido. Use um backup gerado por este aplicativo.'); }
-  };
-  reader.readAsText(file);
-}
-
-document.getElementById('pf-nome').addEventListener('input', updateProfilePreview);
-
-loadLocal();
-activeProfileId = db.profiles[0]?.id||null;
-renderColorDots();
-showHome();
+window.addEventListener('load',()=>{loadData();activeProfileId=db.profiles[0]&&db.profiles[0].id||null;renderColorDots();renderHome();});
 </script>
 </body>
 </html>
