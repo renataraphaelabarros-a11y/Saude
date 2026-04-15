@@ -492,7 +492,7 @@ function openExamChart(){
   document.getElementById('chart-page-title').textContent='Analise - '+first;
   renderExamTabs(ed);renderExamCards(ed);openPage('page-exam-chart');
 }
-function renderExamTabs(ed){document.getElementById('exam-tab-bar').innerHTML=Object.keys(ed.groups).map(g=>'<button class="tab'+(g===activeExamGroup?' active':'')+'" onclick="switchGroup(\''+g.replace(/'/g,"\\'")+'\')">'+(g==='Sangue & Metabolismo'?'Sangue':'g'==='Tireoide & Hormonios'?'Hormonios':'Vitaminas')+'</button>').join('');}
+function renderExamTabs(ed){document.getElementById('exam-tab-bar').innerHTML=Object.keys(ed.groups).map(g=>'<button class="tab'+(g===activeExamGroup?' active':'')+'" onclick="switchGroup(\''+g.replace(/'/g,"\\'")+'\')">'+(g==='Sangue & Metabolismo'?'Sangue':g==='Tireoide & Hormonios'?'Hormonios':'Vitaminas')+'</button>').join('');}
 function switchGroup(g){activeExamGroup=g;const p=getProfile(activeProfileId);const ed=p&&p.nome.split(' ')[0]==='Renata'?RENATA_EXAMS:null;if(ed){renderExamTabs(ed);renderExamCards(ed);}}
 function renderExamCards(ed){
   const group=ed.groups[activeExamGroup],dates=ed.dates;let html='';
