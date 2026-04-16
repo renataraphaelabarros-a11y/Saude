@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://accounts.google.com/gsi/client" defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -321,13 +321,17 @@ textarea{height:70px;resize:vertical}
     <div class="setup-card">
       <div class="setup-icon">&#9729;&#65039;</div>
       <div class="setup-title">Conectar ao Google Drive</div>
-      <div class="setup-text">Clique abaixo para autorizar o acesso ao Drive. Uma janela do Google vai abrir para voc&#234; confirmar.</div>
+      <div class="setup-text">Toque no bot&#227;o abaixo para autorizar. Se j&#225; estiver logado no Google, conecta na hora.</div>
+    </div>
+    <div style="margin:0 14px 12px;padding:11px 13px;background:#fff8e1;border:1px solid #ffe082;border-radius:12px;font-size:12px;color:#7a5a10;line-height:1.6">
+      &#128241; <strong>No celular:</strong> se aparecer uma janela do Google, autorize. Se nada acontecer, verifique se pop-ups est&#227;o liberados para este site nas configura&#231;&#245;es do navegador.
     </div>
     <div class="form-section" style="padding-top:0">
-      <button class="btn" style="font-size:16px;padding:16px" onclick="connectDrive()">
+      <button class="btn" style="font-size:16px;padding:16px" onclick="connectDrive(false)">
         &#128279; Conectar com Google
       </button>
-      <button class="btn btn-grey" style="font-size:12px;margin-top:8px" onclick="showClientIdForm()">Trocar conta / Client ID</button>
+      <button class="btn btn-grey" style="font-size:12px;margin-top:8px" onclick="connectDrive(true)">&#128100; Trocar de conta Google</button>
+      <button class="btn btn-grey" style="font-size:12px;margin-top:6px" onclick="showClientIdForm()">&#9881;&#65039; Alterar Client ID</button>
     </div>
   </div>
 
@@ -351,10 +355,12 @@ textarea{height:70px;resize:vertical}
     <div class="info-box">
       <strong>Como obter o Client ID (s&#243; uma vez):</strong><br>
       1. Acesse <strong>console.cloud.google.com</strong><br>
-      2. Crie um projeto, ative <strong>Drive API</strong><br>
+      2. Crie um projeto, ative <strong>Drive API</strong> e <strong>Sheets API</strong><br>
       3. Credentials &#8594; Create Credentials &#8594; <strong>OAuth 2.0 Client ID</strong><br>
       4. Tipo: <strong>Web application</strong><br>
-      5. Em Authorized JavaScript Origins coloque: <strong>https://renataraphaelabarros-a11y.github.io</strong><br>
+      5. &#128680; Em <strong>Authorized JavaScript Origins</strong> adicione:<br>
+      &nbsp;&nbsp;&nbsp;<code>https://renataraphaelabarros-a11y.github.io</code><br>
+      &nbsp;&nbsp;&nbsp;<em>(sem barra no final — este passo &#233; obrigat&#243;rio para funcionar no celular!)</em><br>
       6. Cole o Client ID acima e clique em Salvar e Conectar
     </div>
   </div>
@@ -607,18 +613,38 @@ function connectDriveFirstTime(){
   localStorage.setItem('drive_client_id',cid);
   connectDrive();
 }
-function connectDrive(){
+function connectDrive(forceSelectAccount){
   const cid=localStorage.getItem('drive_client_id');
   if(!cid){showDriveState('setup');showToast('Configure o Client ID primeiro');return;}
-  if(!window.google||!window.google.accounts||!window.google.accounts.oauth2){showToast('Google API carregando, tente novamente',3000);return;}
-  tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly',callback:(resp)=>{
-    if(resp.error){showToast('Erro: '+resp.error,3000);return;}
-    accessToken=resp.access_token;tokenExpiry=Date.now()+(resp.expires_in*1000);
-    localStorage.setItem('drive_token',accessToken);localStorage.setItem('drive_expiry',String(tokenExpiry));
-    updateDriveUI(true);showToast('Drive conectado!',2500);closePage('page-drive-setup');renderHome();
-    setTimeout(()=>syncExams(false),800);
-  }});
-  tokenClient.requestAccessToken({prompt:'select_account'});
+  if(!window.google||!window.google.accounts||!window.google.accounts.oauth2){
+    showToast('Google API ainda carregando… aguarde 3s e tente novamente',3500);
+    // Tenta de novo após 3s caso o script ainda não tenha carregado
+    setTimeout(()=>{if(window.google&&window.google.accounts&&window.google.accounts.oauth2)connectDrive(forceSelectAccount);},3000);
+    return;
+  }
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:cid,
+    scope:'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly',
+    callback:(resp)=>{
+      if(resp.error){
+        if(resp.error==='popup_closed_by_user'||resp.error==='access_denied'){
+          showToast('Pop-up bloqueado pelo navegador. Permita pop-ups para este site e tente de novo.',5000);
+        } else if(resp.error==='idpiframe_initialization_failed'||resp.error==='origin_mismatch'){
+          showToast('Erro de origem: adicione este site nas Authorized JavaScript Origins no Google Cloud Console.',6000);
+        } else {
+          showToast('Erro ao conectar: '+resp.error,4000);
+        }
+        return;
+      }
+      accessToken=resp.access_token;tokenExpiry=Date.now()+(resp.expires_in*1000);
+      localStorage.setItem('drive_token',accessToken);localStorage.setItem('drive_expiry',String(tokenExpiry));
+      updateDriveUI(true);showToast('Drive conectado!',2500);closePage('page-drive-setup');renderHome();
+      setTimeout(()=>syncExams(false),800);
+    }
+  });
+  // prompt:'' tenta autenticação silenciosa se o usuário já tem sessão Google ativa
+  // Muito mais compatível com mobile. Só usa 'select_account' ao trocar de conta.
+  tokenClient.requestAccessToken({prompt: forceSelectAccount ? 'select_account' : ''});
 }
 function disconnectDrive(){accessToken=null;tokenExpiry=0;localStorage.removeItem('drive_token');localStorage.removeItem('drive_expiry');updateDriveUI(false);showToast('Drive desconectado');showDriveState(localStorage.getItem('drive_client_id')?'saved':'setup');renderPerfil();}
 function showClientIdForm(){showDriveState('setup');}
