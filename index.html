@@ -482,7 +482,15 @@ async function syncExams(manual=false){
       `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/A:Z`,
       {headers:{Authorization:'Bearer '+accessToken}}
     );
-    if(!res.ok)throw new Error('HTTP '+res.status);
+    if(!res.ok){
+      const errBody=await res.json().catch(()=>({}));
+      const msg=errBody.error&&errBody.error.message||'';
+      if(res.status===403&&msg.includes('Sheets'))throw new Error('Ative a Google Sheets API no Cloud Console');
+      if(res.status===403)throw new Error('Sem permissão (403). Desconecte e reconecte o Drive.');
+      if(res.status===401)throw new Error('Token expirado (401). Desconecte e reconecte o Drive.');
+      if(res.status===404)throw new Error('Planilha não encontrada (404). Verifique o ID.');
+      throw new Error('HTTP '+res.status+(msg?': '+msg:''));
+    }
     const data=await res.json();
     const rows=data.values;
     if(!rows||rows.length<3)throw new Error('Planilha vazia');
