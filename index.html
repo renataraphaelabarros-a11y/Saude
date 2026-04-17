@@ -567,9 +567,20 @@ let editingProfileId=null,selectedColor=COLORS[5],pendingFile=null,viewingDocId=
 let currentNav='home',pageStack=[],activeExamGroup=null,tokenClient=null;
 
 function persist(){try{localStorage.setItem('prontuario_v3',JSON.stringify(db));}catch(e){}showToast('Salvo');}
+
+// ── Helpers de cookie (compartilhado entre Safari e PWA no iOS) ──
+function setCookie(k,v,ms){const e=new Date(Date.now()+ms);document.cookie=k+'='+encodeURIComponent(v)+';expires='+e.toUTCString()+';path=/;SameSite=Lax';}
+function getCookie(k){return(document.cookie.split(';').find(c=>c.trim().startsWith(k+'='))||'').split('=').slice(1).join('=').trim()||'';}
+function delCookie(k){document.cookie=k+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';}
+
 function loadData(){
   try{const d=localStorage.getItem('prontuario_v3')||localStorage.getItem('prontuario_v2');if(d)db=JSON.parse(d);}catch(e){}
-  const tok=localStorage.getItem('drive_token'),exp=parseInt(localStorage.getItem('drive_expiry')||'0');
+  // Tenta localStorage primeiro, depois cookie (iOS PWA compartilha cookie com Safari)
+  let tok=localStorage.getItem('drive_token'),exp=parseInt(localStorage.getItem('drive_expiry')||'0');
+  if(!tok||Date.now()>=exp){
+    const ct=decodeURIComponent(getCookie('ds_tok')),ce=parseInt(getCookie('ds_exp')||'0');
+    if(ct&&Date.now()<ce){tok=ct;exp=ce;localStorage.setItem('drive_token',tok);localStorage.setItem('drive_expiry',String(exp));}
+  }
   if(tok&&Date.now()<exp){accessToken=tok;tokenExpiry=exp;updateDriveUI(true);}
 }
 function initials(n){return(n||'').split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();}
@@ -623,77 +634,93 @@ function isMobileOrPWA(){
 
 // Centraliza o que fazer após autenticação bem-sucedida
 function handleOAuthSuccess(token,expiresIn){
+  if(!token)return;
   accessToken=token;
   tokenExpiry=Date.now()+(expiresIn*1000);
+  // Salva em localStorage E cookie (cookie é compartilhado entre Safari e PWA no iOS)
   localStorage.setItem('drive_token',accessToken);
   localStorage.setItem('drive_expiry',String(tokenExpiry));
+  setCookie('ds_tok',accessToken,expiresIn*1000);
+  setCookie('ds_exp',String(tokenExpiry),expiresIn*1000);
   updateDriveUI(true);
   showToast('Drive conectado! ✅',3000);
   renderHome();
   setTimeout(()=>syncExams(false),1000);
 }
 
-// Verifica se voltamos de um redirect OAuth do Google (mobile flow)
+// Verifica se voltamos de um redirect OAuth do Google (hash na URL)
 function checkOAuthRedirectCallback(){
   const hash=window.location.hash;
-  if(!hash||!hash.includes('access_token='))return;
+  if(!hash||!hash.includes('access_token='))return false;
   const params=new URLSearchParams(hash.substring(1));
   const token=params.get('access_token');
   const expiresIn=parseInt(params.get('expires_in')||'3600');
-  if(token){
-    handleOAuthSuccess(token,expiresIn);
-    // Limpa o token da URL para não ficar exposto
-    history.replaceState(null,'',window.location.pathname+window.location.search);
+  if(!token)return false;
+  // Se estamos numa janela/aba filha (popup), envia o token para a janela pai e fecha
+  if(window.opener&&!window.opener.closed){
+    try{window.opener.postMessage({type:'ds_oauth',token,expiresIn},'https://renataraphaelabarros-a11y.github.io');}catch(e){}
+    // Também salva cookie para o caso do postMessage não chegar
+    setCookie('ds_tok',token,expiresIn*1000);
+    setCookie('ds_exp',String(Date.now()+expiresIn*1000),expiresIn*1000);
+    setTimeout(()=>window.close(),300);
+    return true;
+  }
+  // Janela principal (redirect direto): processa normalmente
+  handleOAuthSuccess(token,expiresIn);
+  history.replaceState(null,'',window.location.pathname+window.location.search);
+  return true;
+}
+
+// Verifica cookie quando o app volta ao foco (iOS: token pode ter sido salvo no Safari)
+function checkCookieToken(){
+  if(accessToken&&Date.now()<tokenExpiry)return; // já conectado
+  const ct=decodeURIComponent(getCookie('ds_tok')),ce=parseInt(getCookie('ds_exp')||'0');
+  if(ct&&Date.now()<ce){
+    handleOAuthSuccess(ct,(ce-Date.now())/1000);
   }
 }
 
+let _oauthWin=null;
 function connectDrive(forceSelectAccount){
   const cid=localStorage.getItem('drive_client_id');
   if(!cid){showDriveState('setup');showToast('Configure o Client ID primeiro');return;}
 
-  if(isMobileOrPWA()){
-    // *** MOBILE / PWA: usa redirect direto (sem popup) ***
-    // O Google redireciona de volta com o token na URL
-    const scope='https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly';
-    const redirectUri='https://renataraphaelabarros-a11y.github.io/Saude/';
-    let url='https://accounts.google.com/o/oauth2/v2/auth'
-      +'?client_id='+encodeURIComponent(cid)
-      +'&redirect_uri='+encodeURIComponent(redirectUri)
-      +'&response_type=token'
-      +'&scope='+encodeURIComponent(scope)
-      +'&include_granted_scopes=true';
-    if(forceSelectAccount)url+='&prompt=select_account';
-    window.location.href=url;
+  const scope='https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly';
+  const redirectUri='https://renataraphaelabarros-a11y.github.io/Saude/';
+  let oauthUrl='https://accounts.google.com/o/oauth2/v2/auth'
+    +'?client_id='+encodeURIComponent(cid)
+    +'&redirect_uri='+encodeURIComponent(redirectUri)
+    +'&response_type=token'
+    +'&scope='+encodeURIComponent(scope)
+    +'&include_granted_scopes=true';
+  if(forceSelectAccount)oauthUrl+='&prompt=select_account';
+
+  // Tenta abrir como popup (funciona em desktop e Android Chrome)
+  _oauthWin=window.open(oauthUrl,'google_oauth','width=520,height=640,noopener=no');
+  if(_oauthWin){
+    showToast('Autorizando… confirme na janela do Google',3000);
+    // Monitora se o popup fechou sem postMessage (ex: iOS redireciona e fecha)
+    const t=setInterval(()=>{
+      if(_oauthWin&&_oauthWin.closed){
+        clearInterval(t);_oauthWin=null;
+        // Verifica se o cookie foi salvo pelo callback na janela filha
+        setTimeout(checkCookieToken,400);
+      }
+    },600);
     return;
   }
 
-  // *** DESKTOP: popup flow ***
-  if(!window.google||!window.google.accounts||!window.google.accounts.oauth2){
-    showToast('Google API ainda carregando… tente novamente em 3s',3500);
-    setTimeout(()=>{if(window.google&&window.google.accounts&&window.google.accounts.oauth2)connectDrive(forceSelectAccount);},3000);
-    return;
-  }
-  tokenClient=google.accounts.oauth2.initTokenClient({
-    client_id:cid,
-    scope:'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets.readonly',
-    callback:(resp)=>{
-      if(resp.error){
-        if(resp.error==='popup_closed_by_user'||resp.error==='access_denied'){
-          showToast('Pop-up bloqueado. Permita pop-ups para este site e tente de novo.',5000);
-        }else if(resp.error==='idpiframe_initialization_failed'||resp.error==='origin_mismatch'){
-          showToast('Erro de origem: verifique Authorized JavaScript Origins no Google Cloud Console.',6000);
-        }else{
-          showToast('Erro ao conectar: '+resp.error,4000);
-        }
-        return;
-      }
-      handleOAuthSuccess(resp.access_token,resp.expires_in);
-      closePage('page-drive-setup');
-    }
-  });
-  tokenClient.requestAccessToken({prompt:forceSelectAccount?'select_account':''});
+  // Popup bloqueado → redireciona a página inteira (fallback)
+  showToast('Redirecionando para o Google…',2000);
+  setTimeout(()=>{window.location.href=oauthUrl;},500);
 }
-function disconnectDrive(){accessToken=null;tokenExpiry=0;localStorage.removeItem('drive_token');localStorage.removeItem('drive_expiry');updateDriveUI(false);showToast('Drive desconectado');showDriveState(localStorage.getItem('drive_client_id')?'saved':'setup');renderPerfil();}
+function disconnectDrive(){
+  accessToken=null;tokenExpiry=0;
+  localStorage.removeItem('drive_token');localStorage.removeItem('drive_expiry');
+  delCookie('ds_tok');delCookie('ds_exp');
+  updateDriveUI(false);showToast('Drive desconectado');
+  showDriveState(localStorage.getItem('drive_client_id')?'saved':'setup');renderPerfil();
+}
 function showClientIdForm(){showDriveState('setup');}
 function showDriveState(state){
   document.getElementById('drive-state-connected').classList.toggle('hidden',state!=='connected');
@@ -952,14 +979,29 @@ function deleteProfile(){if(!confirm('Excluir perfil e todos os documentos?'))re
 
 (function createFab(){const fab=document.createElement('button');fab.id='fab-add';fab.style.cssText='position:fixed;bottom:74px;right:18px;width:52px;height:52px;border-radius:26px;background:var(--teal);color:#fff;font-size:28px;border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(26,158,143,.4);cursor:pointer;z-index:90;line-height:1';fab.textContent='+';fab.onclick=()=>openAddDoc();document.body.appendChild(fab);})();
 
+// Recebe token via postMessage de janela popup de OAuth
+window.addEventListener('message',(e)=>{
+  if(e.origin!=='https://renataraphaelabarros-a11y.github.io')return;
+  if(e.data&&e.data.type==='ds_oauth'&&e.data.token){
+    handleOAuthSuccess(e.data.token,e.data.expiresIn||3599);
+  }
+});
+
+// Quando o app volta ao foco (usuário volta do Safari no iOS), verifica cookie
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')checkCookieToken();
+});
+
 window.addEventListener('load',()=>{
   loadData();
   loadCachedExams();
   activeProfileId=db.profiles[0]&&db.profiles[0].id||null;
   renderColorDots();
   renderHome();
-  // Verifica se voltamos de um redirect OAuth (fluxo mobile)
+  // Verifica se voltamos de um redirect OAuth (hash na URL)
   checkOAuthRedirectCallback();
+  // Verifica cookie (iOS: pode ter sido salvo pelo Safari após redirect)
+  checkCookieToken();
   // Se já tem token válido, sincroniza automaticamente
   if(accessToken) setTimeout(()=>syncExams(false),1200);
 });
